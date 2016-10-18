@@ -1,0 +1,14 @@
+{
+  "name": "upload-to-gdrive",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mrigank Krishan",
+  "license": "ISC",
+  "dependencies": {
+    "googleapis": "^14.0.0"
+  }
+}
