@@ -9,7 +9,6 @@
   "author": "Mrigank Krishan",
   "license": "ISC",
   "dependencies": {
-    "googleapis": "^14.0.0",
-    "semantic-ui": "^2.2.4"
+    "googleapis": "^14.0.0"
   }
 }
