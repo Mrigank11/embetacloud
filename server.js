@@ -11,4 +11,4 @@ function makeHTTPRequest(request,response) {
     response.end('HI');
 }
 
-http.createServer(handler).listen(80);
+http.createServer(handler).listen(process.env.PORT);
