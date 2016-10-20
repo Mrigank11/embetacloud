@@ -8,7 +8,8 @@ var httpProxy = require('http-proxy');
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
-const PARENT_HOST = '127.0.0.1:3000';
+//const PARENT_HOST = '127.0.0.1:3000';
+const PARENT_HOST = 'directtodrive.herokuapp.com';
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URL = 'https://directtodrive.herokuapp.com/oauthCallback';
