@@ -9,6 +9,9 @@
   "author": "Mrigank Krishan",
   "license": "ISC",
   "dependencies": {
-    "googleapis": "^14.0.0"
+    "googleapis": "^14.0.0",
+    "http-proxy": "^1.14.0",
+    "socket.io": "^1.5.0",
+    "url": "^0.11.0"
   }
 }

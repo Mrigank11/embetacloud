@@ -1,13 +1,21 @@
-<html>
+<html ng-app="app">
 
 <head>
     <title>eMbeta Cloud</title>
     <link rel="stylesheet" type="text/css" href="libs/semantic/semantic.min.css">
 </head>
 
-<body>
+<body ng-controller="main">
+    <a ng-if="consentPageUrl" ng-href="{{consentPageUrl}}">LOGIN</a>
+    <button class="ui button blue" ng-click="clearVisitedPages()">Clear</button>
+    <div ng-repeat="page in visitedPages" class="ui list" >
+    {{page}}
+    </div>
+    <script src="libs/jquery/jquery.min.js"></script>
     <script src="libs/semantic/semantic.min.js"></script>
     <script src="libs/angular/angular.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/index.js"></script>
 </body>
 
 </html>
