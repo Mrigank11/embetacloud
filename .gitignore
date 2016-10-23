@@ -1,2 +1,5 @@
 node_modules
 .vscode
+jsconfig.json
+typings
+files

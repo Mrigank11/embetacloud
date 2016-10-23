@@ -1,21 +1,52 @@
 <html ng-app="app">
 
 <head>
-    <title>eMbeta Cloud</title>
-    <link rel="stylesheet" type="text/css" href="libs/semantic/semantic.min.css">
+	<title>eMbeta Cloud</title>
+	<link rel="stylesheet" type="text/css" href="libs/semantic/semantic.min.css">
 </head>
 
-<body ng-controller="main">
-    <a ng-if="consentPageUrl" ng-href="{{consentPageUrl}}">LOGIN</a>
-    <button class="ui button blue" ng-click="clearVisitedPages()">Clear</button>
-    <div ng-repeat="page in visitedPages" class="ui list" >
-    {{page}}
-    </div>
-    <script src="libs/jquery/jquery.min.js"></script>
-    <script src="libs/semantic/semantic.min.js"></script>
-    <script src="libs/angular/angular.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="js/index.js"></script>
+<body ng-controller="main" ng-cloak="">
+	<div class="ui grid container">
+		<div class="row">
+			<div class="column four wide">
+				<button class="ui button" ng-click="redirectToLoginUrl(status.consentPageUrl)" ng-class="{'loading':!status,'disabled':(!status || status.logged),'green':status.logged,'primary':!status.logged}">{{status.logged?'Logged':'Login'}}</button>
+				<button class="ui button" ng-click="clearVisitedPages()">Clear Requests</button>
+			</div>
+			<div class="column six wide">
+				<form onsubmit="return false;" ng-submit="openUrl()" class="ui form">
+					<div class="ui input"><input type="text" ng-model="url" required></div>
+					<div class="ui input"><input type="submit" value="Open"></div>
+				</form>
+			</div>
+		</div>
+		<div class="row">
+			<div class="column">
+				<div class="ui items grid">
+					<div ng-repeat="page in visitedPages track by page.id" class="ui item row">
+						<div class="six wide column">{{page.url}}</div>
+						<div class="four wide column">
+							<div class="ui indicating progress" ng-if="page.startedDownload" data-percent='{{page.progress}}' id="progress-{{page.id}}">
+								<div class="bar"></div>
+							</div>
+						</div>
+						<div class="column" ng-if="page.startedDownload">
+							<div class="ui mini buttons">
+								<button class="ui button teal" ng-click="downloadToPC(page)" ng-class="{'disabled':(page.progress!==100)}">Download to PC</button>
+								<div class="or"></div>
+								<button class="ui button orange" ng-class="{'disabled':!status.logged}" ng-click="downloadToDrive(page)">Download to Drive</button>
+							</div>
+						</div>
+						<div class="column" ng-if="page.msg">{{page.msg}}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="libs/jquery/jquery.min.js"></script>
+	<script src="libs/semantic/semantic.min.js"></script>
+	<script src="libs/angular/angular.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="js/index.js"></script>
 </body>
 
 </html>
