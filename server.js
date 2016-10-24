@@ -14,7 +14,8 @@ const session = require('express-session');
 const PORT = Number(process.env.PORT || 3000);
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URL = 'https://embetacloud.herokuapp.com/oauthCallback';
+//const REDIRECT_URL = 'https://embetacloud.herokuapp.com/oauthCallback';
+const REDIRECT_URL = 'http://127.0.0.1:3000/oauthCallback';
 const SCOPES = [
     'https://www.googleapis.com/auth/plus.me',
     'https://www.googleapis.com/auth/drive'
@@ -64,6 +65,9 @@ function middleware(data) {
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
+        if (!FILE.existsSync('files')) {
+            FILE.mkdirSync('files');
+        }
         FILE.closeSync(FILE.openSync('files/' + newFileName, 'w'));
         var stream = FILE.createWriteStream(__dirname + '/files/' + newFileName);
         data.stream.pipe(stream);
@@ -132,7 +136,7 @@ io.on('connection', function (client) {
     });
     client.on('saveToDrive', (data) => {
         var stream = FILE.createReadStream(__dirname + data.data.path);
-        uploadToDrive(stream, data.data.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
+        var req = uploadToDrive(stream, data.data.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
             if (err) {
                 console.log(err);
             } else {
@@ -140,6 +144,14 @@ io.on('connection', function (client) {
                 visitedPages[data.data.id].msg = "Uploaded " + resp.name + " to Drive";
             }
         });
+        var q = setInterval(function () {
+            var written = req.req.connection.bytesWritten;
+            var percent = Math.round((written / data.data.size) * 1000) / 10;
+            client.emit('googleDriveProgress', { id: data.data.id, percent: percent });
+            if (written >= data.data.size) {
+                clearInterval(q);
+            }
+        }, 250);
     });
 });
 
