@@ -26,6 +26,13 @@ app.controller("main", function ($scope, $timeout) {
             $scope.visitedPages[id].msg = "Uploaded " + name + " to Drive";
         });
     });
+    socket.on('googleDriveProgress', (data) => {
+        var percent = data.percent;
+        var id = data.id;
+        $timeout(function () {
+            $scope.visitedPages[id].msg = "Uploaded: " + percent + "%";
+        });
+    });
     //Functions
     $scope.downloadToPC = function (page) {
         window.location.href = page.path;

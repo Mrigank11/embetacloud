@@ -29,14 +29,14 @@
 								<div class="bar"></div>
 							</div>
 						</div>
-						<div class="column" ng-if="page.startedDownload">
+						<div class="four wide column" ng-if="page.startedDownload">
 							<div class="ui mini buttons">
 								<button class="ui button teal" ng-click="downloadToPC(page)" ng-class="{'disabled':(page.progress!==100)}">Download to PC</button>
 								<div class="or"></div>
 								<button class="ui button orange" ng-class="{'disabled':!status.logged}" ng-click="downloadToDrive(page)">Download to Drive</button>
 							</div>
 						</div>
-						<div class="column" ng-if="page.msg">{{page.msg}}</div>
+						<div class="two wide column" ng-if="page.msg">{{page.msg}}</div>
 					</div>
 				</div>
 			</div>
