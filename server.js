@@ -64,6 +64,9 @@ function middleware(data) {
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
+        if (!FILE.existsSync('files')) {
+            FILE.mkdirSync('files');
+        }
         FILE.closeSync(FILE.openSync('files/' + newFileName, 'w'));
         var stream = FILE.createWriteStream(__dirname + '/files/' + newFileName);
         data.stream.pipe(stream);
