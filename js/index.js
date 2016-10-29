@@ -34,6 +34,15 @@ app.controller("main", function ($scope, $timeout) {
         });
     });
     //Functions
+    $scope.togglePin = function (page) {
+        if (page.pinned) {
+            socket.emit('unpin', { page: page });
+            page.pinned = false;
+        } else {
+            socket.emit('pin', { page: page });
+            page.pinned = true;
+        }
+    }
     $scope.downloadToPC = function (page) {
         window.location.href = page.path;
     }
@@ -47,7 +56,11 @@ app.controller("main", function ($scope, $timeout) {
         }
     }
     $scope.clearVisitedPages = function () {
-        $scope.visitedPages = {};
+        Object.keys($scope.visitedPages).forEach((id) => {
+            if (!$scope.visitedPages[id].pinned) {
+                delete $scope.visitedPages[id];
+            }
+        });
         socket.emit('clearVisitedPages');
     }
     $scope.redirectToLoginUrl = function (url) {
