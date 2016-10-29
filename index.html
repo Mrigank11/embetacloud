@@ -38,8 +38,9 @@
 							<i class="icon circular teal pin link" ng-class="{'inverted':page.pinned}" ng-click="togglePin(page)"></i> {{page.url}}
 						</div>
 						<div class="four wide column">
-							<div class="ui indicating progress" ng-if="page.startedDownload" data-percent='{{page.progress}}' id="progress-{{page.id}}">
-								<div class="bar"></div>
+							<div class="ui indicating progress" ng-class="{'active':(page.progress > 0 && page.progress < 100)}" ng-if="page.startedDownload"
+								data-percent='{{page.progress}}'>
+								<div class="bar" style="width:{{page.progress}}%"></div>
 							</div>
 						</div>
 						<div class="four wide column" ng-if="page.startedDownload">

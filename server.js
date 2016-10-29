@@ -74,9 +74,12 @@ function middleware(data) {
         data.stream.on('data', (chunk) => {
             downloadedLength += chunk.length;
             progress = Math.round(((downloadedLength / totalLength) * 1000)) / 10;
-            io.emit('progress', { id: uniqid, progress: progress });
+            io.emit('progress', { id: uniqid, progress: progress, cleared: visitedPages[uniqid].cleared });
             if (visitedPages[uniqid]) {
                 visitedPages[uniqid].progress = progress;
+            }
+            if (visitedPages[uniqid].cleared) {
+                stream.close();
             }
         });
         var obj = {
@@ -142,7 +145,11 @@ io.on('connection', function (client) {
     client.on('clearVisitedPages', () => {
         Object.keys(visitedPages).forEach((id) => {
             if (!visitedPages[id].pinned) {
-                delete visitedPages[id];
+                if (!visitedPages[id].startedDownload) {
+                    delete visitedPages[id];
+                } else {
+                    visitedPages[id].cleared = true;
+                }
             }
         });
     });
