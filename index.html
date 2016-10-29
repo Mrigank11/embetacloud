@@ -12,6 +12,11 @@
 		.x-ng-cloak {
 			display: none !important;
 		}
+		
+		.dl_name {
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 	</style>
 
 </head>
@@ -34,7 +39,7 @@
 			<div class="column">
 				<div class="ui items grid">
 					<div ng-repeat="page in visitedPages track by page.id" class="ui item row">
-						<div class="six wide column">
+						<div class="six wide column dl_name">
 							<i class="icon circular teal pin link" ng-class="{'inverted':page.pinned}" ng-click="togglePin(page)"></i> {{page.url}}
 						</div>
 						<div class="four wide column">
