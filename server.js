@@ -79,7 +79,15 @@ function middleware(data) {
                 visitedPages[uniqid].progress = progress;
             }
         });
-        var obj = { url: data.url, startedDownload: startedDownload, id: uniqid, mime: data.contentType, size: data.headers['content-length'], path: '/files/' + newFileName };
+        var obj = {
+            url: data.url,
+            startedDownload: startedDownload,
+            id: uniqid,
+            mime: data.contentType,
+            size: data.headers['content-length'],
+            path: '/files/' + newFileName,
+            pinned: false
+        };
         io.emit('pageVisited', obj);
         visitedPages[uniqid] = obj;
     }
@@ -132,7 +140,11 @@ io.on('connection', function (client) {
         client.emit('progress', visitedPages[id]);
     });
     client.on('clearVisitedPages', () => {
-        visitedPages = {};
+        Object.keys(visitedPages).forEach((id) => {
+            if (!visitedPages[id].pinned) {
+                delete visitedPages[id];
+            }
+        });
     });
     client.on('saveToDrive', (data) => {
         var stream = FILE.createReadStream(__dirname + data.data.path);
@@ -152,6 +164,12 @@ io.on('connection', function (client) {
                 clearInterval(q);
             }
         }, 250);
+    });
+    client.on('pin', (data) => {
+        visitedPages[data.page.id].pinned = true;
+    });
+    client.on('unpin', (data) => {
+        visitedPages[data.page.id].pinned = false;
     });
 });
 
