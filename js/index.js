@@ -71,19 +71,13 @@ app.controller("main", function ($scope, $timeout) {
     }
     $scope.setProgress = function (data) {
         var obj = $scope.visitedPages[data.id];
-        if (!obj) {
+        if (!obj && !data.cleared) {
             $scope.visitedPages[data.id] = data;
             obj = data;
         }
         if (data.progress) {
             $timeout(function () {
                 $scope.visitedPages[data.id].progress = data.progress;
-                var progressBar = $('#progress-' + data.id);
-                var percent = data.progress;
-                var percentNow = progressBar.progress('get percent');
-                if (percent >= percentNow) {
-                    progressBar.progress({ percent: percent });
-                }
             });
         }
 
