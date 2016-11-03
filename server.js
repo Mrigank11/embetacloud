@@ -65,22 +65,27 @@ function middleware(data) {
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
+        var completeFilePath = __dirname + '/files/' + newFileName;
+        //create /files if it doesn't exist 
         if (!FILE.existsSync('files')) {
             FILE.mkdirSync('files');
         }
-        FILE.closeSync(FILE.openSync('files/' + newFileName, 'w'));
-        var stream = FILE.createWriteStream(__dirname + '/files/' + newFileName);
+        FILE.closeSync(FILE.openSync(completeFilePath, 'w')); //create an empty file
+        var stream = FILE.createWriteStream(completeFilePath);
         data.stream.pipe(stream);
         data.stream.on('data', (chunk) => {
             downloadedLength += chunk.length;
             progress = Math.round(((downloadedLength / totalLength) * 1000)) / 10;
-            io.emit('progress', { id: uniqid, progress: progress, cleared: visitedPages[uniqid].cleared });
             if (visitedPages[uniqid]) {
                 visitedPages[uniqid].progress = progress;
+                io.emit('progress', { id: uniqid, progress: progress, cleared: visitedPages[uniqid].cleared });
+                if (visitedPages[uniqid].cleared) { //download cancelled
+                    stream.close();
+                    FILE.unlink(completeFilePath);  //delete incomplete file
+                    delete visitedPages[uniqid];
+                }
             }
-            if (visitedPages[uniqid].cleared) {
-                stream.close();
-            }
+
         });
         var obj = {
             url: data.url,
