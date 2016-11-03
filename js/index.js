@@ -3,6 +3,8 @@ var app = angular.module("app", []);
 app.controller("main", function ($scope, $timeout) {
     //Init
     $scope.visitedPages = {};
+    $scope.currentSearchPage = 0;
+    $scope.search = { loading: false, results: null };
     //socket emits
     socket.on('status', function (data) {
         $timeout(function () {
@@ -19,18 +21,17 @@ app.controller("main", function ($scope, $timeout) {
     socket.on('progress', function (data) {
         $scope.setProgress(data);
     });
-    socket.on('driveUploadSuccess', function (data) {
+    socket.on('msg', function (data) {
         var id = data.id;
-        var name = data.name;
+        var msg = data.msg;
         $timeout(function () {
-            $scope.visitedPages[id].msg = "Uploaded " + name + " to Drive";
+            $scope.visitedPages[id].msg = msg;
         });
     });
-    socket.on('googleDriveProgress', (data) => {
-        var percent = data.percent;
-        var id = data.id;
+    socket.on("pirateSearchResults", function (data) {
         $timeout(function () {
-            $scope.visitedPages[id].msg = "Uploaded: " + percent + "%";
+            $scope.search.results = data.results;
+            $scope.search.loading = false;
         });
     });
     //Functions
@@ -81,5 +82,20 @@ app.controller("main", function ($scope, $timeout) {
             });
         }
 
+    }
+    $scope.isUrl = function () {
+        if ($scope.url) {
+            return ($scope.url.startsWith('http:') || $scope.url.startsWith('https:'));
+        } else {
+            return null;
+        }
+    }
+    $scope.processForm = function () {
+        if ($scope.isUrl()) {
+            $scope.openUrl();
+        } else {
+            socket.emit('pirateSearch', { query: $scope.url, page: $scope.currentSearchPage });
+            $scope.search.loading = true;
+        }
     }
 });

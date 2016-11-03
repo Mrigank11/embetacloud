@@ -9,6 +9,7 @@ const socketIO = require('socket.io');
 const shortid = require('shortid');
 const mime = require('mime');
 const session = require('express-session');
+const PirateBay = require('thepiratebay');
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
@@ -56,35 +57,37 @@ function uploadToDrive(stream, mime, fileName, oauth2Client, callback) {
 }
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
-    var startedDownload = false;
     var uniqid = shortid.generate();
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
-        startedDownload = true;
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
+        var completeFilePath = __dirname + '/files/' + newFileName;
+        //create /files if it doesn't exist 
         if (!FILE.existsSync('files')) {
             FILE.mkdirSync('files');
         }
-        FILE.closeSync(FILE.openSync('files/' + newFileName, 'w'));
-        var stream = FILE.createWriteStream(__dirname + '/files/' + newFileName);
+        FILE.closeSync(FILE.openSync(completeFilePath, 'w')); //create an empty file
+        var stream = FILE.createWriteStream(completeFilePath);
         data.stream.pipe(stream);
         data.stream.on('data', (chunk) => {
             downloadedLength += chunk.length;
             progress = Math.round(((downloadedLength / totalLength) * 1000)) / 10;
-            io.emit('progress', { id: uniqid, progress: progress, cleared: visitedPages[uniqid].cleared });
             if (visitedPages[uniqid]) {
                 visitedPages[uniqid].progress = progress;
+                io.emit('progress', { id: uniqid, progress: progress, cleared: visitedPages[uniqid].cleared });
+                if (visitedPages[uniqid].cleared) { //download cancelled
+                    stream.close();
+                    FILE.unlink(completeFilePath);  //delete incomplete file
+                    delete visitedPages[uniqid];
+                }
             }
-            if (visitedPages[uniqid].cleared) {
-                stream.close();
-            }
+
         });
         var obj = {
             url: data.url,
-            startedDownload: startedDownload,
             id: uniqid,
             mime: data.contentType,
             size: data.headers['content-length'],
@@ -145,29 +148,30 @@ io.on('connection', function (client) {
     client.on('clearVisitedPages', () => {
         Object.keys(visitedPages).forEach((id) => {
             if (!visitedPages[id].pinned) {
-                if (!visitedPages[id].startedDownload) {
-                    delete visitedPages[id];
-                } else {
-                    visitedPages[id].cleared = true;
-                }
+                visitedPages[id].cleared = true;
             }
         });
     });
     client.on('saveToDrive', (data) => {
-        var stream = FILE.createReadStream(__dirname + data.data.path);
-        var req = uploadToDrive(stream, data.data.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
+        var obj = data.data;
+        var stream = FILE.createReadStream(__dirname + obj.path);
+        var req = uploadToDrive(stream, obj.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
             if (err) {
                 console.log(err);
+                var msg = "Error: " + err;
+                client.emit('msg', { msg: msg, id: obj.id });
+                visitedPages[obj.id].msg = msg;
             } else {
-                client.emit('driveUploadSuccess', { name: resp.name, id: data.data.id });
-                visitedPages[data.data.id].msg = "Uploaded " + resp.name + " to Drive";
+                var msg = "Uploaded " + resp.name + " to Drive";
+                client.emit('msg', { msg: msg, id: obj.id });
+                visitedPages[obj.id].msg = msg;
             }
         });
         var q = setInterval(function () {
             var written = req.req.connection.bytesWritten;
-            var percent = Math.round((written / data.data.size) * 1000) / 10;
-            client.emit('googleDriveProgress', { id: data.data.id, percent: percent });
-            if (written >= data.data.size) {
+            var percent = Math.round((written / obj.size) * 1000) / 10;
+            client.emit('msg', { msg: "Uploaded " + percent + "%", id: obj.id });
+            if (written >= obj.size) {
                 clearInterval(q);
             }
         }, 250);
@@ -177,6 +181,13 @@ io.on('connection', function (client) {
     });
     client.on('unpin', (data) => {
         visitedPages[data.page.id].pinned = false;
+    });
+    client.on('pirateSearch', (data) => {
+        var query = data.query;
+        var page = data.page;
+        PirateBay.search(query).then(results => {
+            client.emit("pirateSearchResults", { results: results });
+        });
     });
 });
 
