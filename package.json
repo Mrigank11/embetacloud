@@ -19,5 +19,9 @@
     "socket.io": "^1.5.0",
     "unblocker": "^1.1.4",
     "url": "^0.11.0"
-  }
+  },
+  "cacheDirectories": [
+    "node_modules",
+    "libs/semantic"
+  ]
 }
