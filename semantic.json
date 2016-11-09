@@ -26,6 +26,7 @@
     "progress",
     "grid",
     "container",
-    "input"
+    "input",
+	"icon"
   ]
 }

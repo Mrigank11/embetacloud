@@ -19,18 +19,11 @@ app.controller("main", function ($scope, $timeout) {
     socket.on('progress', function (data) {
         $scope.setProgress(data);
     });
-    socket.on('driveUploadSuccess', function (data) {
+    socket.on('msg', function (data) {
         var id = data.id;
-        var name = data.name;
+        var msg = data.msg;
         $timeout(function () {
-            $scope.visitedPages[id].msg = "Uploaded " + name + " to Drive";
-        });
-    });
-    socket.on('googleDriveProgress', (data) => {
-        var percent = data.percent;
-        var id = data.id;
-        $timeout(function () {
-            $scope.visitedPages[id].msg = "Uploaded: " + percent + "%";
+            $scope.visitedPages[id].msg = msg;
         });
     });
     //Functions

@@ -13,7 +13,7 @@
 			display: none !important;
 		}
 		
-		.dl_name {
+		.truncate_text {
 			overflow: hidden;
 			text-overflow: ellipsis;
 		}
@@ -21,8 +21,9 @@
 
 </head>
 
-<body ng-controller="main" ng-cloak="">
-	<div class="ui grid container">
+<body ng-controller="main">
+	<div class="ui grid container" ng-cloak>
+		<!--controls-->
 		<div class="row">
 			<div class="column four wide">
 				<button class="ui button" ng-click="redirectToLoginUrl(status.consentPageUrl)" ng-class="{'loading':!status,'disabled':(!status || status.logged),'green':status.logged,'primary':!status.logged}">{{status.logged?'Logged':'Login'}}</button>
@@ -35,27 +36,34 @@
 				</form>
 			</div>
 		</div>
+		<!--list of downloads-->
 		<div class="row">
 			<div class="column">
-				<div class="ui items grid">
+				<div class="ui items centered grid">
 					<div ng-repeat="page in visitedPages track by page.id" class="ui item row">
-						<div class="six wide column dl_name">
+						<!--pin-->
+						<div class="one wide column">
 							<i class="icon circular teal pin link" ng-class="{'inverted':page.pinned}" ng-click="togglePin(page)"></i>
+						</div>
+						<!--url of file-->
+						<div class="five wide column truncate_text" title="{{page.url}}">
 							<span>{{page.url}}</span>
 						</div>
+						<!--progress bar-->
 						<div class="four wide column">
-							<div class="ui indicating progress" ng-class="{'active':(page.progress > 0 && page.progress < 100)}" ng-if="page.startedDownload"
-								data-percent='{{page.progress}}'>
+							<div class="ui indicating progress" ng-class="{'active':(page.progress > 0 && page.progress < 100)}" data-percent='{{page.progress}}'>
 								<div class="bar" style="width:{{page.progress}}%"></div>
 							</div>
 						</div>
-						<div class="four wide column" ng-if="page.startedDownload">
+						<!--download buttons-->
+						<div class="four wide column">
 							<div class="ui mini buttons">
 								<button class="ui button teal" ng-click="downloadToPC(page)" ng-class="{'disabled':(page.progress!==100)}">Download to PC</button>
 								<div class="or"></div>
 								<button class="ui button orange" ng-class="{'disabled':!status.logged}" ng-click="downloadToDrive(page)">Download to Drive</button>
 							</div>
 						</div>
+						<!--extra message-->
 						<div class="two wide column" ng-if="page.msg">{{page.msg}}</div>
 					</div>
 				</div>

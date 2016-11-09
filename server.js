@@ -56,12 +56,10 @@ function uploadToDrive(stream, mime, fileName, oauth2Client, callback) {
 }
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
-    var startedDownload = false;
     var uniqid = shortid.generate();
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
-        startedDownload = true;
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
@@ -89,7 +87,6 @@ function middleware(data) {
         });
         var obj = {
             url: data.url,
-            startedDownload: startedDownload,
             id: uniqid,
             mime: data.contentType,
             size: data.headers['content-length'],
@@ -150,29 +147,30 @@ io.on('connection', function (client) {
     client.on('clearVisitedPages', () => {
         Object.keys(visitedPages).forEach((id) => {
             if (!visitedPages[id].pinned) {
-                if (!visitedPages[id].startedDownload) {
-                    delete visitedPages[id];
-                } else {
-                    visitedPages[id].cleared = true;
-                }
+                visitedPages[id].cleared = true;
             }
         });
     });
     client.on('saveToDrive', (data) => {
-        var stream = FILE.createReadStream(__dirname + data.data.path);
-        var req = uploadToDrive(stream, data.data.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
+        var obj = data.data;
+        var stream = FILE.createReadStream(__dirname + obj.path);
+        var req = uploadToDrive(stream, obj.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
             if (err) {
                 console.log(err);
+                var msg = "Error: " + err;
+                client.emit('msg', { msg: msg, id: obj.id });
+                visitedPages[obj.id].msg = msg;
             } else {
-                client.emit('driveUploadSuccess', { name: resp.name, id: data.data.id });
-                visitedPages[data.data.id].msg = "Uploaded " + resp.name + " to Drive";
+                var msg = "Uploaded " + resp.name + " to Drive";
+                client.emit('msg', { msg: msg, id: obj.id });
+                visitedPages[obj.id].msg = msg;
             }
         });
         var q = setInterval(function () {
             var written = req.req.connection.bytesWritten;
-            var percent = Math.round((written / data.data.size) * 1000) / 10;
-            client.emit('googleDriveProgress', { id: data.data.id, percent: percent });
-            if (written >= data.data.size) {
+            var percent = Math.round((written / obj.size) * 1000) / 10;
+            client.emit('msg', { msg: "Uploaded " + percent + "%", id: obj.id });
+            if (written >= obj.size) {
                 clearInterval(q);
             }
         }, 250);
