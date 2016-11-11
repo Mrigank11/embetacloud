@@ -9,6 +9,7 @@ const socketIO = require('socket.io');
 const shortid = require('shortid');
 const mime = require('mime');
 const session = require('express-session');
+const PirateBay = require('thepiratebay');
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
@@ -180,6 +181,13 @@ io.on('connection', function (client) {
     });
     client.on('unpin', (data) => {
         visitedPages[data.page.id].pinned = false;
+    });
+    client.on('pirateSearch', (data) => {
+        var query = data.query;
+        var page = data.page;
+        PirateBay.search(query).then(results => {
+            client.emit("pirateSearchResults", { results: results });
+        });
     });
 });
 

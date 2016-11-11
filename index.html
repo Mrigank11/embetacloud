@@ -30,10 +30,23 @@
 				<button class="ui button" ng-click="clearVisitedPages()">Clear Requests</button>
 			</div>
 			<div class="column six wide">
-				<form onsubmit="return false;" ng-submit="openUrl()" class="ui form">
+				<form onsubmit="return false;" ng-submit="processForm()" class="ui form">
 					<div class="ui input"><input type="text" ng-model="url" required></div>
-					<div class="ui input"><input type="submit" value="Open"></div>
+					<div class="ui input" ng-if="isUrl()"><input type="submit" value="Open"></div>
+					<div class="ui input" ng-if="!isUrl()"><input type="submit" value="Search"></div>
 				</form>
+			</div>
+		</div>
+		<!--search results-->
+		<div class="row" ng-if="search.results || search.loading">
+			<div class="sixteen wide column">
+				<div class="ui segment" ng-class="{'loading':search.loading}">
+					<div class="ui grid">
+						<div class="ui row" ng-repeat="result in search.results">
+							{{result.name}}
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 		<!--list of downloads-->
