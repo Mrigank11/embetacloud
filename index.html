@@ -17,77 +17,134 @@
 			overflow: hidden;
 			text-overflow: ellipsis;
 		}
+		
+		.searchResults {
+			height: 200px;
+			overflow-y: auto;
+		}
+		
+		.seeders {
+			color: green;
+		}
+		
+		.leechers {
+			color: red;
+		}
+		
+		.cage {
+			padding-top: 10px !important;
+			padding-bottom: 40px !important;
+			max-width: 700px !important;
+			margin: 0px auto !important;
+		}
 	</style>
 
 </head>
 
-<body ng-controller="main">
+<body ng-controller="main" class="cage">
 	<div class="ui grid container" ng-cloak>
-		<!--controls-->
+		<!--head-->
 		<div class="row">
-			<div class="column four wide">
-				<button class="ui button" ng-click="redirectToLoginUrl(status.consentPageUrl)" ng-class="{'loading':!status,'disabled':(!status || status.logged),'green':status.logged,'primary':!status.logged}">{{status.logged?'Logged':'Login'}}</button>
-				<button class="ui button" ng-click="clearVisitedPages()">Clear Requests</button>
+			<!--logo-->
+			<div class="thirteen wide column">
+				<h2 style="color:#2185d0;">
+					<i class="ui large blue cloud icon"></i> eMbeta Cloud
+				</h2>
 			</div>
-			<div class="column six wide">
-				<form onsubmit="return false;" ng-submit="processForm()" class="ui form">
-					<div class="ui input"><input type="text" ng-model="url" required></div>
-					<div class="ui input" ng-if="isUrl()"><input type="submit" value="Open"></div>
-					<div class="ui input" ng-if="!isUrl()"><input type="submit" value="Search"></div>
-				</form>
+			<!--controls-->
+			<div class="three wide column">
+				<i title="Login" ng-click="redirectToLoginUrl(status.consentPageUrl)" class="ui circular icon" ng-class="{
+						'loading':!status,
+						'spinner':!status,
+						'disabled':(!status || status.logged),
+						'inverted':status.logged,
+						'green':status.logged,
+						'link':(!status || !status.logged),
+						'user':status
+					}"></i>
+				<i class="ui trash circular link icon" title="Clear All Requests" ng-click="clearVisitedPages()"></i>
+				<i class="ui lightning circular icon" ng-class="{'green':connected,'red':!connected}"></i>
+			</div>
+		</div>
+		<!--input-->
+		<div class="row">
+			<div class="column">
+				<div class="ui fluid action input">
+					<input type="text" ng-model="url" placeholder="Enter url to open, magnet or search torrent...">
+
+					<div class="ui tiny button" ng-if="isUrl()" ng-click="processForm()">Open</div>
+					<div class="ui tiny button" ng-if="!isUrl()" ng-click="processForm()">Search</div>
+				</div>
 			</div>
 		</div>
 		<!--search results-->
-		<div class="row" ng-if="search.results || search.loading">
-			<div class="sixteen wide column">
-				<div class="ui segment" ng-class="{'loading':search.loading}">
+		<div class="row" ng-if="(search.results && search.results.length>0) || search.loading">
+			<div class="column">
+				<div class="ui segment searchResults" ng-class="{'loading':search.loading}">
 					<div class="ui grid">
-						<div class="ui row" ng-repeat="result in search.results">
-							{{result.name}}
+						<div class="row" ng-repeat="result in search.results">
+							<div class="eight wide column"><a href="{{result.link}}">{{result.name}}</a></div>
+							<div class="two wide column">{{result.size}}</div>
+							<div class="two wide column"><span class="seeders">{{result.seeders}}</span> seeders</div>
+							<div class="two wide column"><span class="leechers">{{result.leechers}}</span> leechers</div>
+							<div class="two wide column">
+								<i class="ui large green download link icon" ng-click="addTorrent(result.magnetLink)"></i>
+							</div>
 						</div>
 					</div>
+				</div>
+			</div>
+		</div>
+		<!--no results found message-->
+		<div class="row" ng-if="search.results && search.results.length==0 && !search.loading">
+			<div class="column">
+				<div class="ui message">
+					<p>No torrents found</p>
 				</div>
 			</div>
 		</div>
 		<!--list of downloads-->
-		<div class="row">
-			<div class="column">
-				<div class="ui items centered grid">
-					<div ng-repeat="page in visitedPages track by page.id" class="ui item row">
-						<!--pin-->
-						<div class="one wide column">
-							<i class="icon circular teal pin link" ng-class="{'inverted':page.pinned}" ng-click="togglePin(page)"></i>
-						</div>
-						<!--url of file-->
-						<div class="five wide column truncate_text" title="{{page.url}}">
-							<span>{{page.url}}</span>
-						</div>
-						<!--progress bar-->
-						<div class="four wide column">
-							<div class="ui indicating progress" ng-class="{'active':(page.progress > 0 && page.progress < 100)}" data-percent='{{page.progress}}'>
-								<div class="bar" style="width:{{page.progress}}%"></div>
-							</div>
-						</div>
-						<!--download buttons-->
-						<div class="four wide column">
-							<div class="ui mini buttons">
-								<button class="ui button teal" ng-click="downloadToPC(page)" ng-class="{'disabled':(page.progress!==100)}">Download to PC</button>
-								<div class="or"></div>
-								<button class="ui button orange" ng-class="{'disabled':!status.logged}" ng-click="downloadToDrive(page)">Download to Drive</button>
-							</div>
-						</div>
-						<!--extra message-->
-						<div class="two wide column" ng-if="page.msg">{{page.msg}}</div>
+		<div ng-repeat="page in visitedPages track by page.id" class="ui item row">
+			<!--pin-->
+			<div class="one wide column">
+				<i class="icon circular teal pin link" ng-class="{'inverted':page.pinned}" ng-click="togglePin(page)"></i>
+			</div>
+			<!--url of file-->
+			<div class="five wide column truncate_text" title="{{page.url}}">
+				<span>{{page.url}}</span>
+			</div>
+			<!--progress bar-->
+			<div class="four wide column">
+				<div class="ui indicating progress" ng-class="{'active':(page.progress > 0 && page.progress < 100)}" data-percent='{{page.progress}}'>
+					<div class="bar" style="width:{{page.progress}}%">
+						<div class="progress">{{page.progress}}%</div>
 					</div>
 				</div>
 			</div>
+			<!--download buttons-->
+			<div class="four wide column">
+				<div class="ui mini buttons">
+					<button title="Download to PC" class="ui icon button teal" ng-click="downloadToPC(page)" ng-class="{'disabled':(page.progress!==100)}">
+						<i class="ui download icon"></i>
+					</button>
+					<div class="or"></div>
+					<button title="Upload to Drive" class="ui icon button orange" ng-class="{'disabled':!status.logged}" ng-click="downloadToDrive(page)">
+						<i class="icons">
+							<i class="ui cloud icon"></i>
+							<i class="ui red google corner icon"></i>
+						</i>
+					</button>
+				</div>
+			</div>
+			<!--extra message-->
+			<div class="two wide column" ng-if="page.msg">{{page.msg}}</div>
 		</div>
-	</div>
-	<script src="libs/jquery/jquery.min.js"></script>
-	<script src="libs/semantic/dist/semantic.min.js"></script>
-	<script src="libs/angular/angular.min.js"></script>
-	<script src="/socket.io/socket.io.js"></script>
-	<script src="js/index.js"></script>
+
+		<script src="libs/jquery/jquery.min.js"></script>
+		<script src="libs/semantic/dist/semantic.min.js"></script>
+		<script src="libs/angular/angular.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="js/index.js"></script>
 </body>
 
 </html>

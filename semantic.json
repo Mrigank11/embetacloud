@@ -31,7 +31,8 @@
     "grid",
     "item",
     "progress",
-    "form"
+    "form",
+    "message"
   ],
   "version": "2.2.6"
 }
