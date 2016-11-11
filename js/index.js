@@ -1,37 +1,46 @@
 var socket = io.connect();
 var app = angular.module("app", []);
+const parts = ['downloadItem'];
+
 app.controller("main", function ($scope, $timeout) {
     //Init
     $scope.visitedPages = {};
     $scope.currentSearchPage = 0;
+    $scope.connected = false;
     $scope.search = { loading: false, results: null };
     //socket emits
-    socket.on('status', function (data) {
+    socket.on('setKey', function (data) {
+        var name = data.name;
+        var key = data.key;
+        var value = data.value;
         $timeout(function () {
-            $scope.status = {};
-            $scope.status.consentPageUrl = data.url;
-            $scope.status.logged = data.logged;
+            $scope[name][key] = value;
         });
     });
-    socket.on('pageVisited', function (data) {
+    socket.on('setObj', function (data) {
+        var name = data.name;
+        var value = data.value;
         $timeout(function () {
-            $scope.visitedPages[data.id] = data;
+            $scope[name] = value;
+        });
+    })
+    socket.on('deleteKey', function (data) {
+        var name = data.name;
+        var key = data.key;
+        if ($scope[name][key]) {
+            $timeout(function () {
+                delete $scope[name][key];
+            });
+        }
+    });
+    socket.on('disconnect', function () {
+        $timeout(function () {
+            $scope.connected = false;
         });
     });
-    socket.on('progress', function (data) {
-        $scope.setProgress(data);
-    });
-    socket.on('msg', function (data) {
-        var id = data.id;
-        var msg = data.msg;
+    socket.on('connect', function () {
         $timeout(function () {
-            $scope.visitedPages[id].msg = msg;
-        });
-    });
-    socket.on("pirateSearchResults", function (data) {
-        $timeout(function () {
-            $scope.search.results = data.results;
-            $scope.search.loading = false;
+            $scope.connected = true;
         });
     });
     //Functions
@@ -65,23 +74,12 @@ app.controller("main", function ($scope, $timeout) {
         socket.emit('clearVisitedPages');
     }
     $scope.redirectToLoginUrl = function (url) {
-        window.location = url;
+        if (!$scope.status.logged) {
+            window.location = url;
+        }
     }
     $scope.openUrl = function () {
         window.open(window.location.origin + '/proxy/' + $scope.url);
-    }
-    $scope.setProgress = function (data) {
-        var obj = $scope.visitedPages[data.id];
-        if (!obj && !data.cleared) {
-            $scope.visitedPages[data.id] = data;
-            obj = data;
-        }
-        if (data.progress) {
-            $timeout(function () {
-                $scope.visitedPages[data.id].progress = data.progress;
-            });
-        }
-
     }
     $scope.isUrl = function () {
         if ($scope.url) {
@@ -97,5 +95,11 @@ app.controller("main", function ($scope, $timeout) {
             socket.emit('pirateSearch', { query: $scope.url, page: $scope.currentSearchPage });
             $scope.search.loading = true;
         }
+    }
+    $scope.addTorrent = function (magnetLink) {
+        socket.emit('addTorrent', { magnet: magnetLink });
+    }
+    $scope.numKeys = function (obj) {
+        return Object.keys(obj).length;
     }
 });
