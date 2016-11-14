@@ -1,0 +1,32 @@
+[ng\:cloak],
+[ng-cloak],
+[data-ng-cloak],
+[x-ng-cloak],
+.ng-cloak,
+.x-ng-cloak {
+	display: none !important;
+}
+.truncate_text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+		
+.searchResults {
+	height: 200px;
+	overflow-y: auto;
+}
+		
+.seeders {
+	color: green;
+}
+		
+.leechers {
+	color: red;
+}
+		
+.cage {
+	padding-top: 10px !important;
+	padding-bottom: 40px !important;
+	max-width: 700px !important;
+	margin: 0px auto !important;
+}

@@ -12,6 +12,7 @@ const session = require('express-session');
 const PirateBay = require('thepiratebay');
 const prettyBytes = require('pretty-bytes');
 const torrentStream = require('torrent-stream');
+const FSE = require('fs-extra');
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
@@ -19,6 +20,8 @@ const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URL = 'https://embetacloud.herokuapp.com/oauthCallback';
 //const REDIRECT_URL = 'http://127.0.0.1:3000/oauthCallback';
+const serveDirs = ['css', 'files', 'js', 'libs', 'parts'];
+
 const SCOPES = [
     'https://www.googleapis.com/auth/plus.me',
     'https://www.googleapis.com/auth/drive'
@@ -88,6 +91,7 @@ function middleware(data) {
                     });
                 } else {
                     visitedPages[uniqid].progress = progress;
+                    visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
                     sendVisitedPagesUpdate(io, uniqid);
                 }
             }
@@ -96,13 +100,15 @@ function middleware(data) {
         var prevLen = 0;
         var speed;
         var interval = setInterval(() => {
-            if (!prevLen == downloadedLength && visitedPages[uniqid]) {
-                speed = prettyBytes((downloadedLength - prevLen) * 10);
+            if (prevLen !== downloadedLength && visitedPages[uniqid]) {
+                speed = prettyBytes((downloadedLength - prevLen) * 10) + '/s';
                 visitedPages[uniqid].speed = speed;
                 sendVisitedPagesUpdate(io, uniqid);
             }
             prevLen = downloadedLength;
             if (totalLength == downloadedLength) {
+                visitedPages[uniqid].speed = prettyBytes(0) + '/s';
+                sendVisitedPagesUpdate(io, uniqid);
                 clearInterval(interval);
             }
         }, 100);
@@ -110,7 +116,7 @@ function middleware(data) {
             url: data.url,
             id: uniqid,
             mime: data.contentType,
-            size: data.headers['content-length'],
+            size: prettyBytes(data.headers['content-length'] / 2 * 2),
             path: '/files/' + newFileName,
             pinned: false
         };
@@ -133,9 +139,10 @@ var sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
-app.use('/libs', express.static('libs'));
-app.use('/js', express.static('js'));
-app.use('/files', express.static('files'));
+serveDirs.forEach((dir) => {
+    app.use('/' + dir, express.static(dir));
+});
+
 app.get('/', function (req, res) {
     res.sendFile(__dirname + '/index.html');
 });
@@ -244,6 +251,17 @@ io.on('connection', function (client) {
         var uniqid = shortid();
         engine.on('ready', () => {
             console.log(engine.files);
+            //create folder
+            var filePath = __dirname + '/files/' + uniqid + '/' + file.path;
+            engine.files.forEach(function (file) {
+                var stream = file.createReadStream();
+                FSE.ensureFile(filePath, (err) => {
+                    if (!err) {
+                        var writeStream = FILE.createWriteStream(filePath);
+                        stream.pipe(writeStream);
+                    }
+                });
+            });
         });
     });
 });
