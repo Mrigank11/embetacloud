@@ -1,7 +1,0 @@
-node_modules
-.vscode
-jsconfig.json
-typings
-files
-static/libs/semantic/dist/*
-**.ts
