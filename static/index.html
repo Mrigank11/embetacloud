@@ -1,0 +1,92 @@
+<html ng-app="app">
+
+<head>
+	<title>eMbeta Cloud</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="libs/semantic/dist/semantic.min.css">
+	<link rel="stylesheet" type="text/css" href="css/index.css">
+</head>
+
+<body ng-controller="main" class="cage">
+	<div class="ui grid container" ng-cloak>
+		<!--head-->
+		<div class="equal width row">
+			<!--logo-->
+			<div class="left floated column">
+				<h2 style="color:#2185d0;">
+					<i class="ui large blue cloud icon"></i> eMbeta
+				</h2>
+			</div>
+			<!--controls-->
+			<div class="column right floated right aligned">
+				<i title="Login" ng-click="redirectToLoginUrl(status.consentPageUrl)" class="ui circular icon" ng-class="{
+						'loading':!status,
+						'spinner':!status,
+						'disabled':(!status || status.logged),
+						'inverted':status.logged,
+						'green':status.logged,
+						'link':(!status || !status.logged),
+						'user':status
+					}"></i>
+				<i class="ui trash circular link icon" title="Clear All Requests" ng-click="clearVisitedPages()"></i>
+				<i class="ui lightning circular icon" ng-class="{'green':connected,'red':!connected}"></i>
+			</div>
+		</div>
+		<!--input-->
+		<div class="row">
+			<div class="column">
+				<form onsubmit="return false;" ng-submit="processForm()">
+					<div class="ui fluid action input">
+						<input type="text" ng-model="url" ng-keydown="console.log($event.keyCode)" placeholder="Enter url to open, magnet or search torrent...">
+
+						<button type="submit" class="ui tiny button" ng-if="urlType()=='url'">Open</button>
+						<button type="submit" class="ui tiny button " ng-if="urlType()=='search'">Search</button>
+						<button type="submit" class="ui tiny button " ng-if="urlType()=='magnet'">Load Magnet</button>
+					</div>
+				</form>
+			</div>
+		</div>
+		<!--search results-->
+		<div class="row " ng-if="(search.results && search.results.length>0) || search.loading">
+			<div class="column">
+				<div class="ui segment searchResults" ng-class="{'loading':search.loading}">
+					<div class="ui grid">
+						<div class="row" ng-repeat="result in search.results">
+							<div class="eight wide column"><a href="{{result.link}}">{{result.name}}</a></div>
+							<div class="two wide column">{{result.size}}</div>
+							<div class="two wide column"><span class="seeders">{{result.seeders}}</span> seeders</div>
+							<div class="two wide column"><span class="leechers">{{result.leechers}}</span> leechers</div>
+							<div class="two wide column">
+								<i class="ui large green download link icon" ng-click="addTorrent(result.magnetLink)"></i>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--no results found message-->
+		<div class="row" ng-if="search.results && search.results.length==0 && !search.loading">
+			<div class="column">
+				<div class="ui message">
+					<p>No torrents found</p>
+				</div>
+			</div>
+		</div>
+		<!--list of downloads-->
+		<div class="row">
+			<div class="column">
+				<download-item ng-repeat="page in visitedPages track by page.id"></download-item>
+			</div>
+		</div>
+
+		<script src="libs/jquery/jquery.min.js"></script>
+		<script src="libs/semantic/dist/semantic.min.js"></script>
+		<script src="libs/angular/angular.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="js/index.js"></script>
+		<!--download item-->
+		<script src="parts/downloadItem/downloadItem.js"></script>
+		<link rel="stylesheet" type="text/css" href="parts/downloadItem/downloadItem.css">
+</body>
+
+</html>
