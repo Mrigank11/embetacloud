@@ -81,23 +81,39 @@ app.controller("main", function ($scope, $timeout) {
     $scope.openUrl = function () {
         window.open(window.location.origin + '/proxy/' + $scope.url);
     }
-    $scope.isUrl = function () {
+    $scope.urlType = function () {
         if ($scope.url) {
-            return ($scope.url.startsWith('http:') || $scope.url.startsWith('https:'));
+            var url = $scope.url;
+            if (url.startsWith('http')) {
+                return 'url';
+            } else if (url.startsWith('magnet:')) {
+                return 'magnet';
+            } else {
+                return 'search';
+            }
         } else {
-            return null;
+            return 'search';
         }
     }
     $scope.processForm = function () {
-        if ($scope.isUrl()) {
-            $scope.openUrl();
-        } else {
-            socket.emit('pirateSearch', { query: $scope.url, page: $scope.currentSearchPage });
-            $scope.search.loading = true;
+        switch ($scope.urlType()) {
+            case 'url':
+                $scope.openUrl();
+                break;
+            case 'search':
+                socket.emit('pirateSearch', { query: $scope.url, page: $scope.currentSearchPage });
+                $scope.search.loading = true;
+                break;
+            case 'magnet':
+                $scope.addTorrent($scope.url);
         }
     }
     $scope.addTorrent = function (magnetLink) {
-        socket.emit('addTorrent', { magnet: magnetLink });
+        if ($scope.status.logged) {
+            socket.emit('addTorrent', { magnet: magnetLink });
+        } else {
+            alert('Please Login to continue.');
+        }
     }
     $scope.numKeys = function (obj) {
         return Object.keys(obj).length;

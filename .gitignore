@@ -3,4 +3,5 @@ node_modules
 jsconfig.json
 typings
 files
-libs/semantic/dist/*
+static/libs/semantic/dist/*
+**.ts
