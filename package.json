@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/server.js"
   },
   "author": "Mrigank Krishan",
   "license": "ISC",
@@ -24,10 +24,6 @@
     "unblocker": "^1.1.4",
     "url": "^0.11.0"
   },
-  "cacheDirectories": [
-    "node_modules",
-    "libs/semantic"
-  ],
   "engines": {
     "node": "6.9.1"
   }
