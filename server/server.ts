@@ -1,25 +1,26 @@
-"use strict";
 //Requires
-var url = require('url');
-var Unblocker = require('unblocker');
-var shortid = require('shortid');
-var session = require('express-session');
-var PirateBay = require('thepiratebay');
-var prettyBytes = require('pretty-bytes');
-var debug = require('debug')("Cloud::Server");
-var express = require("express");
-var socketIO = require("socket.io");
-var FILE = require('fs');
-var mime = require('mime');
-var http = require('http');
-var path = require('path');
-var GDrive_1 = require('./GDrive/GDrive');
-var Torrent_1 = require('./Torrent/Torrent');
+const Unblocker = require('unblocker');
+const shortid = require('shortid');
+const session = require('express-session');
+const PirateBay = require('thepiratebay');
+const prettyBytes = require('pretty-bytes');
+const debug = require('debug')("eMCloud::Server");
+const socketIO = require("socket.io");
+import * as FILE from 'fs';
+import * as mime from 'mime';
+import * as http from 'http';
+import * as torrentStream from 'torrent-stream';
+import * as path from 'path';
+import { GDrive } from './GDrive/GDrive';
+import { Torrent } from './Torrent/Torrent';
+import * as express from 'express';
+
 //Constants
-var PORT = Number(process.env.PORT || 3000);
-var SERVER_DIRS = ['css', 'files', 'js', 'libs', 'parts'];
-var FILES_PATH = path.join(__dirname, '../files');
-var SPEED_TICK_TIME = 500; //ms
+const PORT = Number(process.env.PORT || 3000);
+const SERVER_DIRS = ['css', 'files', 'js', 'libs', 'parts'];
+const FILES_PATH = path.join(__dirname, '../files');
+const SPEED_TICK_TIME = 500;    //ms
+
 //Init
 var oauth2ClientArray = {};
 var capture = false;
@@ -27,7 +28,8 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIO(server);
 var visitedPages = {};
-var CLOUD = new GDrive_1.GDrive();
+const CLOUD = new GDrive();
+
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var uniqid = shortid.generate();
@@ -45,29 +47,29 @@ function middleware(data) {
         FILE.closeSync(FILE.openSync(completeFilePath, 'w')); //create an empty file
         var stream = FILE.createWriteStream(completeFilePath);
         data.stream.pipe(stream);
-        data.stream.on('data', function (chunk) {
+        data.stream.on('data', (chunk) => {
             downloadedLength += chunk.length;
             var progress = Math.round(((downloadedLength / totalLength) * 1000)) / 10;
             if (visitedPages[uniqid]) {
-                if (visitedPages[uniqid].cleared) {
+                if (visitedPages[uniqid].cleared) { //download cancelled
                     stream.close();
-                    FILE.unlink(completeFilePath); //delete incomplete file
+                    FILE.unlink(completeFilePath);  //delete incomplete file
                     delete visitedPages[uniqid];
                     io.emit('deleteKey', {
                         name: 'visitedPages',
                         key: uniqid
                     });
-                }
-                else {
+                } else {
                     visitedPages[uniqid].progress = progress;
                     visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
                     sendVisitedPagesUpdate(io, uniqid);
                 }
             }
+
         });
         var prevLen = 0;
         var speed;
-        var interval = setInterval(function () {
+        var interval = setInterval(() => {
             if ((visitedPages[uniqid] && visitedPages[uniqid].cleared) || !visitedPages[uniqid]) {
                 clearInterval(interval);
             }
@@ -102,6 +104,7 @@ function sendVisitedPagesUpdate(socket, id) {
         value: visitedPages[id]
     });
 }
+
 var sessionMiddleware = session({
     secret: "XYeMBetaCloud",
     resave: false,
@@ -109,42 +112,39 @@ var sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
-SERVER_DIRS.forEach(function (dir) {
+SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
-app.get('/', function (req, res) {
+
+app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
-app.get('/oauthCallback', function (req, res) {
-    var sessionID = req.sessionID;
+app.get('/oauthCallback', (req, res) => {
+    var sessionID = req['sessionID'];
     var oauth2Client = oauth2ClientArray[sessionID];
-    if (!oauth2Client) {
-        res.send('Invalid Attempt[E01]');
-        return false;
-    }
+    if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function (err, tokens) {
+        oauth2Client.getToken(code, function(err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
-            }
-            else {
+            } else {
                 console.log("Error: " + err);
                 res.end('Error Occured');
             }
         });
-    }
-    else {
+    } else {
         res.send('Invalid Attempt[E03]');
     }
 });
-io.use(function (socket, next) {
+io.use(function(socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
-io.on('connection', function (client) {
+
+io.on('connection', function(client) {
     var sessionID = client.conn.request.sessionID;
-    if (!oauth2ClientArray[sessionID]) {
+    if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
     var consentPageUrl = CLOUD.getConsentPageURL(oauth2ClientArray[sessionID]);
@@ -159,16 +159,15 @@ io.on('connection', function (client) {
         name: 'visitedPages',
         value: visitedPages
     });
-    client.on('clearVisitedPages', function () {
-        Object.keys(visitedPages).forEach(function (id) {
+    client.on('clearVisitedPages', () => {
+        Object.keys(visitedPages).forEach((id) => {
             if (!visitedPages[id].pinned) {
                 if (visitedPages[id].progress == 100) {
                     //  download completed but user requested to clear
                     // delete downloaded file
                     FILE.unlink(path.join(FILES_PATH, '../', visitedPages[id].path));
                     delete visitedPages[id];
-                }
-                else {
+                } else {
                     // download is in progress
                     // partial file will be deleted by middleware function
                     visitedPages[id].cleared = true;
@@ -176,22 +175,21 @@ io.on('connection', function (client) {
             }
         });
     });
-    client.on('saveToDrive', function (data) {
+    client.on('saveToDrive', (data) => {
         var obj = data.data;
         var stream = FILE.createReadStream(__dirname + obj.path);
-        var req = CLOUD.uploadFile(stream, obj.mime, data.name, oauth2ClientArray[sessionID], function (err, resp) {
+        var req = CLOUD.uploadFile(stream, obj.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
             if (err) {
                 console.log(err);
                 var msg = "Error: " + err;
                 visitedPages[obj.id].msg = msg;
                 sendVisitedPagesUpdate(client, obj.id);
-            }
-            else {
+            } else {
                 var msg = "Uploaded " + resp.name + " to Drive";
                 visitedPages[obj.id].msg = msg;
             }
         });
-        var q = setInterval(function () {
+        var q = setInterval(function() {
             var written = req.req.connection.bytesWritten;
             var percent = Math.round((written / obj.size) * 1000) / 10;
             visitedPages[obj.id].msg = "Uploaded " + percent + "%";
@@ -201,32 +199,33 @@ io.on('connection', function (client) {
             }
         }, 250);
     });
-    client.on('pin', function (data) {
+    client.on('pin', (data) => {
         visitedPages[data.page.id].pinned = true;
     });
-    client.on('unpin', function (data) {
+    client.on('unpin', (data) => {
         visitedPages[data.page.id].pinned = false;
     });
-    client.on('pirateSearch', function (data) {
+    client.on('pirateSearch', (data) => {
         var query = data.query;
         var page = data.page;
-        PirateBay.search(query).then(function (results) {
+        PirateBay.search(query).then(results => {
             client.emit('setObj', {
                 name: 'search',
                 value: {
                     results: results,
                     loading: false
                 }
-            });
+            })
         });
     });
-    client.on('addTorrent', function (data) {
-        var torrentEngine = new Torrent_1.Torrent(data.magnet, FILES_PATH);
-        torrentEngine.on("downloaded", function (path) {
+    client.on('addTorrent', (data) => {
+        var torrentEngine = new Torrent(data.magnet, FILES_PATH);
+        torrentEngine.on("downloaded", (path) => {
             CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
         });
     });
 });
+
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
-//# sourceMappingURL=server.js.map
+
