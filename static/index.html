@@ -39,8 +39,9 @@
 					<div class="ui fluid action input">
 						<input type="text" ng-model="url" ng-keydown="console.log($event.keyCode)" placeholder="Enter url to open, magnet or search torrent...">
 
-						<button type="submit" class="ui tiny button" ng-if="isUrl()">Open</button>
-						<button type="submit" class="ui tiny button " ng-if="!isUrl() ">Search</button>
+						<button type="submit" class="ui tiny button" ng-if="urlType()=='url'">Open</button>
+						<button type="submit" class="ui tiny button " ng-if="urlType()=='search'">Search</button>
+						<button type="submit" class="ui tiny button " ng-if="urlType()=='magnet'">Load Magnet</button>
 					</div>
 				</form>
 			</div>
