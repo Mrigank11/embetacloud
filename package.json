@@ -4,7 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "postinstall": "gulp && tsc -p ."
   },
   "author": "Mrigank Krishan",
   "license": "ISC",
