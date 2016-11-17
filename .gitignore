@@ -4,5 +4,4 @@ jsconfig.json
 typings
 files
 static/libs/semantic/dist/*
-server/**/*.js
 server/**/*.js.map
