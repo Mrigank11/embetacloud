@@ -17,6 +17,3 @@ npm start
 # Debugging
 eMbeta Cloud is [debug](https://github.com/visionmedia/debug) compatible, to get debug info set environment variable `DEBUG=eMCloud:*`
 and start server.
-
-# Todo
-- use CLOUD emits for progress while uploading file to GDrive
