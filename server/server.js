@@ -1,26 +1,24 @@
+"use strict";
 //Requires
-const Unblocker = require('unblocker');
-const shortid = require('shortid');
-const session = require('express-session');
-const PirateBay = require('thepiratebay');
-const prettyBytes = require('pretty-bytes');
-const debug = require('debug')("eMCloud::Server");
-const socketIO = require("socket.io");
-import * as FILE from 'fs';
-import * as mime from 'mime';
-import * as http from 'http';
-import * as torrentStream from 'torrent-stream';
-import * as path from 'path';
-import { GDrive } from './GDrive/GDrive';
-import { Torrent } from './Torrent/Torrent';
-import * as express from 'express';
-
+var Unblocker = require('unblocker');
+var shortid = require('shortid');
+var session = require('express-session');
+var PirateBay = require('thepiratebay');
+var prettyBytes = require('pretty-bytes');
+var debug = require('debug')("eMCloud::Server");
+var socketIO = require("socket.io");
+var FILE = require('fs');
+var mime = require('mime');
+var http = require('http');
+var path = require('path');
+var GDrive_1 = require('./GDrive/GDrive');
+var Torrent_1 = require('./Torrent/Torrent');
+var express = require('express');
 //Constants
-const PORT = Number(process.env.PORT || 3000);
-const SERVER_DIRS = ['css', 'js', 'libs', 'parts'];
-const FILES_PATH = path.join(__dirname, '../files');
-const SPEED_TICK_TIME = 500;    //ms
-
+var PORT = Number(process.env.PORT || 3000);
+var SERVER_DIRS = ['css', 'js', 'libs', 'parts'];
+var FILES_PATH = path.join(__dirname, '../files');
+var SPEED_TICK_TIME = 500; //ms
 //Init
 var oauth2ClientArray = {};
 var capture = false;
@@ -30,9 +28,8 @@ var io = socketIO(server);
 var visitedPages = {};
 var torrents = {};
 var torrentObjs = {};
-const CLOUD = new GDrive();
-
-function percentage(n): any {
+var CLOUD = new GDrive_1.GDrive();
+function percentage(n) {
     var p = (Math.round(n * 1000) / 10);
     return (p > 100) ? 100 : p;
 }
@@ -53,29 +50,29 @@ function middleware(data) {
         FILE.closeSync(FILE.openSync(completeFilePath, 'w')); //create an empty file
         var stream = FILE.createWriteStream(completeFilePath);
         data.stream.pipe(stream);
-        data.stream.on('data', (chunk) => {
+        data.stream.on('data', function (chunk) {
             downloadedLength += chunk.length;
             var progress = percentage((downloadedLength / totalLength));
             if (visitedPages[uniqid]) {
-                if (visitedPages[uniqid].cleared) { //download cancelled
+                if (visitedPages[uniqid].cleared) {
                     stream.close();
-                    FILE.unlink(completeFilePath);  //delete incomplete file
+                    FILE.unlink(completeFilePath); //delete incomplete file
                     delete visitedPages[uniqid];
                     io.emit('deleteKey', {
                         name: 'visitedPages',
                         key: uniqid
                     });
-                } else {
+                }
+                else {
                     visitedPages[uniqid].progress = progress;
                     visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
                     sendVisitedPagesUpdate(io, uniqid);
                 }
             }
-
         });
         var prevLen = 0;
         var speed;
-        var interval = setInterval(() => {
+        var interval = setInterval(function () {
             if ((visitedPages[uniqid] && visitedPages[uniqid].cleared) || !visitedPages[uniqid]) {
                 clearInterval(interval);
             }
@@ -111,7 +108,6 @@ function sendVisitedPagesUpdate(socket, id) {
         value: visitedPages[id]
     });
 }
-
 function sendTorrentsUpdate(socket, id) {
     socket.emit('setKey', {
         name: 'torrents',
@@ -119,48 +115,50 @@ function sendTorrentsUpdate(socket, id) {
         value: torrents[id]
     });
 }
-
 var sessionMiddleware = session({
     secret: "XYeMBetaCloud",
     resave: false,
     saveUninitialized: true
 });
-
 app.use(sessionMiddleware);
 app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
-SERVER_DIRS.forEach((dir) => {
+SERVER_DIRS.forEach(function (dir) {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
-app.get('/oauthCallback', (req, res) => {
+app.get('/oauthCallback', function (req, res) {
     var sessionID = req['sessionID'];
     var oauth2Client = oauth2ClientArray[sessionID];
-    if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
+    if (!oauth2Client) {
+        res.send('Invalid Attempt[E01]');
+        return false;
+    }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function(err, tokens) {
+        oauth2Client.getToken(code, function (err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
-            } else {
+            }
+            else {
                 console.log("Error: " + err);
                 res.end('Error Occured');
             }
         });
-    } else {
+    }
+    else {
         res.send('Invalid Attempt[E03]');
     }
 });
-io.use(function(socket, next) {
+io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
-
-io.on('connection', function(client) {
+io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
-    if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
+    if (!oauth2ClientArray[sessionID]) {
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
     var consentPageUrl = CLOUD.getConsentPageURL(oauth2ClientArray[sessionID]);
@@ -178,16 +176,17 @@ io.on('connection', function(client) {
     client.emit('setObj', {
         name: 'torrents',
         value: torrents
-    })
-    client.on('clearVisitedPages', () => {
-        Object.keys(visitedPages).forEach((id) => {
+    });
+    client.on('clearVisitedPages', function () {
+        Object.keys(visitedPages).forEach(function (id) {
             if (!visitedPages[id].pinned) {
                 if (visitedPages[id].progress == 100) {
                     //  download completed but user requested to clear
                     // delete downloaded file
                     FILE.unlink(path.join(FILES_PATH, '../', visitedPages[id].path));
                     delete visitedPages[id];
-                } else {
+                }
+                else {
                     // download is in progress
                     // partial file will be deleted by middleware function
                     visitedPages[id].cleared = true;
@@ -195,54 +194,55 @@ io.on('connection', function(client) {
             }
         });
     });
-    client.on('saveToDrive', (data) => {
+    client.on('saveToDrive', function (data) {
         var obj = data.data;
         var stream = FILE.createReadStream(path.join(FILES_PATH, '../', obj.path));
-        var req = CLOUD.uploadFile(stream, obj.length, obj.mime, data.name, oauth2ClientArray[sessionID], false, (err, resp) => {
+        var req = CLOUD.uploadFile(stream, obj.length, obj.mime, data.name, oauth2ClientArray[sessionID], false, function (err, resp) {
             if (err) {
                 console.log(err);
                 var msg = "Error: " + err;
                 visitedPages[obj.id].msg = msg;
                 sendVisitedPagesUpdate(io, obj.id);
-            } else {
+            }
+            else {
                 var msg = "Uploaded " + resp.name + " to Drive";
                 visitedPages[obj.id].msg = msg;
                 sendVisitedPagesUpdate(io, obj.id);
             }
         }, obj.id);
-        CLOUD.on('progress', (data) => {
+        CLOUD.on('progress', function (data) {
             if (data.type == 'file' && data.id == obj.id) {
                 visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
                 sendVisitedPagesUpdate(io, obj.id);
             }
         });
     });
-    client.on('pin', (data) => {
+    client.on('pin', function (data) {
         visitedPages[data.page.id].pinned = true;
     });
-    client.on('unpin', (data) => {
+    client.on('unpin', function (data) {
         visitedPages[data.page.id].pinned = false;
     });
-    client.on('pirateSearch', (data) => {
+    client.on('pirateSearch', function (data) {
         var query = data.query;
         var page = data.page;
-        PirateBay.search(query).then(results => {
+        PirateBay.search(query).then(function (results) {
             client.emit('setObj', {
                 name: 'search',
                 value: {
                     results: results,
                     loading: false
                 }
-            })
+            });
         });
     });
-    client.on('addTorrent', (data) => {
+    client.on('addTorrent', function (data) {
         var uniqid = shortid();
-        torrentObjs[uniqid] = new Torrent(data.magnet, FILES_PATH, uniqid);
-        torrentObjs[uniqid].on("downloaded", (path) => {
+        torrentObjs[uniqid] = new Torrent_1.Torrent(data.magnet, FILES_PATH, uniqid);
+        torrentObjs[uniqid].on("downloaded", function (path) {
             //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
         });
-        torrentObjs[uniqid].on("info", (info) => {
+        torrentObjs[uniqid].on("info", function (info) {
             torrents[uniqid] = {
                 id: uniqid,
                 name: info.name,
@@ -259,7 +259,7 @@ io.on('connection', function(client) {
                 value: false
             });
         });
-        torrentObjs[uniqid].on("progress", (data) => {
+        torrentObjs[uniqid].on("progress", function (data) {
             var speed = prettyBytes(data.speed) + '/s';
             var downloaded = prettyBytes(data.downloadedLength);
             var progress = percentage((data.downloadedLength / torrents[uniqid].length));
@@ -271,7 +271,7 @@ io.on('connection', function(client) {
             sendTorrentsUpdate(io, uniqid);
         });
     });
-    client.on('getDirStructure', (data) => {
+    client.on('getDirStructure', function (data) {
         var id = data.id;
         var dirStructure = torrentObjs[id].getDirObj();
         torrents[id].gettingDirStructure = false;
@@ -279,17 +279,17 @@ io.on('connection', function(client) {
         torrents[id].msg = 'Got directory structure';
         sendTorrentsUpdate(client, id);
     });
-    client.on("uploadDirToDrive", (data) => {
+    client.on("uploadDirToDrive", function (data) {
         var id = data.id;
         var dirSize = 0;
         CLOUD.uploadDir(path.join(FILES_PATH, id), oauth2ClientArray[sessionID], false, id);
         var uploaded = 0;
-        CLOUD.on("addSize", (data) => {
+        CLOUD.on("addSize", function (data) {
             if (data.id == id) {
                 dirSize = dirSize + data.size;
             }
         });
-        CLOUD.on("fileDownloaded", (data) => {
+        CLOUD.on("fileDownloaded", function (data) {
             if (data.id == id) {
                 uploaded = uploaded + data.size;
                 var name = data.name;
@@ -298,7 +298,7 @@ io.on('connection', function(client) {
                 sendTorrentsUpdate(io, id);
             }
         });
-        CLOUD.on('progress', (data) => {
+        CLOUD.on('progress', function (data) {
             if (data.id == id) {
                 switch (data.type) {
                     case 'mkdir':
@@ -313,11 +313,11 @@ io.on('connection', function(client) {
             }
         });
     });
-    client.on("updateTorrentObj", (data) => {
+    client.on("updateTorrentObj", function (data) {
         var obj = data.obj;
         torrents[obj.id] = obj;
     });
 });
-
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
+//# sourceMappingURL=server.js.map
