@@ -54,6 +54,7 @@ var Torrent = (function (_super) {
                         downloadedLength: _this.totalLength
                     });
                     clearInterval(interval);
+                    _this.engine.destroy();
                 }
             }, TICK_TIME);
         });
