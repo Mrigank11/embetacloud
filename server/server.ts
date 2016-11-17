@@ -17,7 +17,7 @@ import * as express from 'express';
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
-const SERVER_DIRS = ['css', 'files', 'js', 'libs', 'parts'];
+const SERVER_DIRS = ['css', 'js', 'libs', 'parts'];
 const FILES_PATH = path.join(__dirname, '../files');
 const SPEED_TICK_TIME = 500;    //ms
 
@@ -28,8 +28,14 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIO(server);
 var visitedPages = {};
+var torrents = {};
+var torrentObjs = {};
 const CLOUD = new GDrive();
 
+function percentage(n): any {
+    var p = (Math.round(n * 1000) / 10);
+    return (p > 100) ? 100 : p;
+}
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var uniqid = shortid.generate();
@@ -49,7 +55,7 @@ function middleware(data) {
         data.stream.pipe(stream);
         data.stream.on('data', (chunk) => {
             downloadedLength += chunk.length;
-            var progress = Math.round(((downloadedLength / totalLength) * 1000)) / 10;
+            var progress = percentage((downloadedLength / totalLength));
             if (visitedPages[uniqid]) {
                 if (visitedPages[uniqid].cleared) { //download cancelled
                     stream.close();
@@ -89,9 +95,10 @@ function middleware(data) {
             url: data.url,
             id: uniqid,
             mime: data.contentType,
-            size: prettyBytes(data.headers['content-length'] / 2 * 2),
+            size: prettyBytes(data.headers['content-length'] * 1),
             path: '/files/' + newFileName,
-            pinned: false
+            pinned: false,
+            length: data.headers['content-length'] * 1
         };
         visitedPages[uniqid] = obj;
         sendVisitedPagesUpdate(io, uniqid);
@@ -105,17 +112,26 @@ function sendVisitedPagesUpdate(socket, id) {
     });
 }
 
+function sendTorrentsUpdate(socket, id) {
+    socket.emit('setKey', {
+        name: 'torrents',
+        key: id,
+        value: torrents[id]
+    });
+}
+
 var sessionMiddleware = session({
     secret: "XYeMBetaCloud",
     resave: false,
     saveUninitialized: true
 });
+
 app.use(sessionMiddleware);
 app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
 SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
-
+app.use('/files', express.static(FILES_PATH));
 app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
@@ -159,6 +175,10 @@ io.on('connection', function(client) {
         name: 'visitedPages',
         value: visitedPages
     });
+    client.emit('setObj', {
+        name: 'torrents',
+        value: torrents
+    })
     client.on('clearVisitedPages', () => {
         Object.keys(visitedPages).forEach((id) => {
             if (!visitedPages[id].pinned) {
@@ -177,27 +197,25 @@ io.on('connection', function(client) {
     });
     client.on('saveToDrive', (data) => {
         var obj = data.data;
-        var stream = FILE.createReadStream(__dirname + obj.path);
-        var req = CLOUD.uploadFile(stream, obj.mime, data.name, oauth2ClientArray[sessionID], (err, resp) => {
+        var stream = FILE.createReadStream(path.join(FILES_PATH, '../', obj.path));
+        var req = CLOUD.uploadFile(stream, obj.length, obj.mime, data.name, oauth2ClientArray[sessionID], false, (err, resp) => {
             if (err) {
                 console.log(err);
                 var msg = "Error: " + err;
                 visitedPages[obj.id].msg = msg;
-                sendVisitedPagesUpdate(client, obj.id);
+                sendVisitedPagesUpdate(io, obj.id);
             } else {
                 var msg = "Uploaded " + resp.name + " to Drive";
                 visitedPages[obj.id].msg = msg;
+                sendVisitedPagesUpdate(io, obj.id);
+            }
+        }, obj.id);
+        CLOUD.on('progress', (data) => {
+            if (data.type == 'file' && data.id == obj.id) {
+                visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
+                sendVisitedPagesUpdate(io, obj.id);
             }
         });
-        var q = setInterval(function() {
-            var written = req.req.connection.bytesWritten;
-            var percent = Math.round((written / obj.size) * 1000) / 10;
-            visitedPages[obj.id].msg = "Uploaded " + percent + "%";
-            sendVisitedPagesUpdate(client, obj.id);
-            if (written >= obj.size) {
-                clearInterval(q);
-            }
-        }, 250);
     });
     client.on('pin', (data) => {
         visitedPages[data.page.id].pinned = true;
@@ -219,13 +237,85 @@ io.on('connection', function(client) {
         });
     });
     client.on('addTorrent', (data) => {
-        var torrentEngine = new Torrent(data.magnet, FILES_PATH);
-        torrentEngine.on("downloaded", (path) => {
-            CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
+        var uniqid = shortid();
+        torrentObjs[uniqid] = new Torrent(data.magnet, FILES_PATH, uniqid);
+        torrentObjs[uniqid].on("downloaded", (path) => {
+            //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
         });
+        torrentObjs[uniqid].on("info", (info) => {
+            torrents[uniqid] = {
+                id: uniqid,
+                name: info.name,
+                infoHash: info.infoHash,
+                size: prettyBytes(info.length),
+                isTorrent: true,
+                length: info.length,
+                showFiles: false,
+                msg: 'Connecting to peers'
+            };
+            sendTorrentsUpdate(client, uniqid);
+            client.emit("setObj", {
+                name: 'magnetLoading',
+                value: false
+            });
+        });
+        torrentObjs[uniqid].on("progress", (data) => {
+            var speed = prettyBytes(data.speed) + '/s';
+            var downloaded = prettyBytes(data.downloadedLength);
+            var progress = percentage((data.downloadedLength / torrents[uniqid].length));
+            var peers = data.peers;
+            torrents[uniqid].speed = speed;
+            torrents[uniqid].downloaded = downloaded;
+            torrents[uniqid].progress = progress;
+            torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
+            sendTorrentsUpdate(io, uniqid);
+        });
+    });
+    client.on('getDirStructure', (data) => {
+        var id = data.id;
+        var dirStructure = torrentObjs[id].getDirObj();
+        torrents[id].gettingDirStructure = false;
+        torrents[id].dirStructure = dirStructure;
+        torrents[id].msg = 'Got directory structure';
+        sendTorrentsUpdate(client, id);
+    });
+    client.on("uploadDirToDrive", (data) => {
+        var id = data.id;
+        var dirSize = 0;
+        CLOUD.uploadDir(path.join(FILES_PATH, id), oauth2ClientArray[sessionID], false, id);
+        var uploaded = 0;
+        CLOUD.on("addSize", (data) => {
+            if (data.id == id) {
+                dirSize = dirSize + data.size;
+            }
+        });
+        CLOUD.on("fileDownloaded", (data) => {
+            if (data.id == id) {
+                uploaded = uploaded + data.size;
+                var name = data.name;
+                torrents[id].msg = "Uploaded %s successfully | Total: " + percentage(uploaded / dirSize) + "%";
+            }
+        });
+        CLOUD.on('progress', (data) => {
+            if (data.id == id) {
+                switch (data.type) {
+                    case 'mkdir':
+                        torrents[id].msg = 'Creating cloud directory: ' + data.name;
+                        sendTorrentsUpdate(io, id);
+                        break;
+                    case 'file':
+                        torrents[id].msg = 'Uploading ' + data.name + ' : ' + percentage(data.uploaded / data.size) + "% | Total: " + percentage(uploaded / dirSize) + "%";
+                        sendTorrentsUpdate(io, id);
+                        break;
+                }
+            }
+        });
+    });
+    client.on("updateTorrentObj", (data) => {
+        var obj = data.obj;
+        torrents[obj.id] = obj;
     });
 });
 
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
-

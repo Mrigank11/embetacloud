@@ -2,49 +2,50 @@ var socket = io.connect();
 var app = angular.module("app", []);
 const parts = ['downloadItem'];
 
-app.controller("main", function ($scope, $timeout) {
+app.controller("main", function($scope, $timeout, server) {
     //Init
     $scope.visitedPages = {};
+    $scope.torrents = {};
     $scope.currentSearchPage = 0;
     $scope.connected = false;
     $scope.search = { loading: false, results: null };
     //socket emits
-    socket.on('setKey', function (data) {
+    socket.on('setKey', function(data) {
         var name = data.name;
         var key = data.key;
         var value = data.value;
-        $timeout(function () {
+        $timeout(function() {
             $scope[name][key] = value;
         });
     });
-    socket.on('setObj', function (data) {
+    socket.on('setObj', function(data) {
         var name = data.name;
         var value = data.value;
-        $timeout(function () {
+        $timeout(function() {
             $scope[name] = value;
         });
     })
-    socket.on('deleteKey', function (data) {
+    socket.on('deleteKey', function(data) {
         var name = data.name;
         var key = data.key;
         if ($scope[name][key]) {
-            $timeout(function () {
+            $timeout(function() {
                 delete $scope[name][key];
             });
         }
     });
-    socket.on('disconnect', function () {
-        $timeout(function () {
+    socket.on('disconnect', function() {
+        $timeout(function() {
             $scope.connected = false;
         });
     });
-    socket.on('connect', function () {
-        $timeout(function () {
+    socket.on('connect', function() {
+        $timeout(function() {
             $scope.connected = true;
         });
     });
     //Functions
-    $scope.togglePin = function (page) {
+    $scope.togglePin = function(page) {
         if (page.pinned) {
             socket.emit('unpin', { page: page });
             page.pinned = false;
@@ -53,19 +54,27 @@ app.controller("main", function ($scope, $timeout) {
             page.pinned = true;
         }
     }
-    $scope.downloadToPC = function (page) {
+    $scope.downloadToPC = function(page) {
         window.location.href = page.path;
     }
-    $scope.downloadToDrive = function (page) {
+    $scope.downloadToDrive = function(page) {
+        if (!(page.progress == 100 && $scope.status.logged)) {
+            return false;
+        }
+        if (page.isTorrent) {
+            page.msg = "Uploading to Drive";
+            socket.emit('uploadDirToDrive', { id: page.id });
+            return false;
+        }
         var filename = prompt("Enter File Name: ");
         if (filename) {
             socket.emit('saveToDrive', { data: page, name: filename });
-            $timeout(function () {
+            $timeout(function() {
                 $scope.visitedPages[page.id].msg = "Uploading To Drive";
             });
         }
     }
-    $scope.clearVisitedPages = function () {
+    $scope.clearVisitedPages = function() {
         Object.keys($scope.visitedPages).forEach((id) => {
             if (!$scope.visitedPages[id].pinned) {
                 delete $scope.visitedPages[id];
@@ -73,15 +82,15 @@ app.controller("main", function ($scope, $timeout) {
         });
         socket.emit('clearVisitedPages');
     }
-    $scope.redirectToLoginUrl = function (url) {
+    $scope.redirectToLoginUrl = function(url) {
         if (!$scope.status.logged) {
             window.location = url;
         }
     }
-    $scope.openUrl = function () {
+    $scope.openUrl = function() {
         window.open(window.location.origin + '/proxy/' + $scope.url);
     }
-    $scope.urlType = function () {
+    $scope.urlType = function() {
         if ($scope.url) {
             var url = $scope.url;
             if (url.startsWith('http')) {
@@ -95,7 +104,7 @@ app.controller("main", function ($scope, $timeout) {
             return 'search';
         }
     }
-    $scope.processForm = function () {
+    $scope.processForm = function() {
         switch ($scope.urlType()) {
             case 'url':
                 $scope.openUrl();
@@ -108,14 +117,42 @@ app.controller("main", function ($scope, $timeout) {
                 $scope.addTorrent($scope.url);
         }
     }
-    $scope.addTorrent = function (magnetLink) {
-        if ($scope.status.logged) {
-            socket.emit('addTorrent', { magnet: magnetLink });
-        } else {
-            alert('Please Login to continue.');
-        }
+    $scope.addTorrent = function(magnetLink) {
+        $scope.magnetLoading = true;
+        socket.emit('addTorrent', { magnet: magnetLink });
+        $timeout(function() {
+            if ($scope.magnetLoading) {
+                $scope.magnetLoading = false;
+                alert("Error loading Magnet.");
+            }
+        }, 60000);
     }
-    $scope.numKeys = function (obj) {
+    $scope.numKeys = function(obj) {
         return Object.keys(obj).length;
     }
+    $scope.showTorrentFiles = function(obj) {
+        if (obj.showFiles) {
+            obj.showFiles = false;
+            server.updateTorrentObj(obj);
+            return false;
+        }
+        if (obj.dirStructure) {
+            //already have dirStructure
+            obj.showFiles = true;
+            server.updateTorrentObj(obj);
+        } else {
+            //request server for dirStructure
+            obj.msg = "Getting directory structure";
+            obj.gettingDirStructure = true;
+            socket.emit('getDirStructure', { id: obj.id });
+        }
+    }
+});
+
+app.factory('server', function() {
+    var functions = {};
+    functions.updateTorrentObj = function(torrentObj) {
+        socket.emit('updateTorrentObj', { obj: torrentObj });
+    }
+    return functions;
 });

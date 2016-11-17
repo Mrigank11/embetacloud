@@ -40,3 +40,6 @@ download-item{
         opacity:1;
     }
 }
+.directoryContainer{
+    margin-top:-20px    !important;
+}
