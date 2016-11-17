@@ -7,8 +7,8 @@ import { EventEmitter } from 'events';
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URL = 'https://embetacloud.herokuapp.com/oauthCallback';
-//const REDIRECT_URL = 'http://127.0.0.1:3000/oauthCallback';
+//const REDIRECT_URL = 'https://embetacloud.herokuapp.com/oauthCallback';
+const REDIRECT_URL = 'http://127.0.0.1:3000/oauthCallback';
 const SCOPES = [
     'https://www.googleapis.com/auth/plus.me',
     'https://www.googleapis.com/auth/drive'

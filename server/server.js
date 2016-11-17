@@ -293,7 +293,9 @@ io.on('connection', function (client) {
             if (data.id == id) {
                 uploaded = uploaded + data.size;
                 var name = data.name;
-                torrents[id].msg = "Uploaded %s successfully | Total: " + percentage(uploaded / dirSize) + "%";
+                torrents[id].msg = "Uploaded " + name + " successfully | Total: " + percentage(uploaded / dirSize) + "%";
+                torrents[id].progress = percentage(uploaded / dirSize);
+                sendTorrentsUpdate(io, id);
             }
         });
         CLOUD.on('progress', function (data) {
