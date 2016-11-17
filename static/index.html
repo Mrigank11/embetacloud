@@ -40,8 +40,8 @@
 						<input type="text" ng-model="url" ng-keydown="console.log($event.keyCode)" placeholder="Enter url to open, magnet or search torrent...">
 
 						<button type="submit" class="ui tiny button" ng-if="urlType()=='url'">Open</button>
-						<button type="submit" class="ui tiny button " ng-if="urlType()=='search'">Search</button>
-						<button type="submit" class="ui tiny button " ng-if="urlType()=='magnet'">Load Magnet</button>
+						<button type="submit" class="ui tiny button " ng-class="{'loading':magnetLoading}" ng-if="urlType()=='search'">Search</button>
+						<button type="submit" class="ui tiny button " ng-class="{'loading':magnetLoading}" ng-if="urlType()=='magnet'">Load Magnet</button>
 					</div>
 				</form>
 			</div>
@@ -78,6 +78,17 @@
 				<download-item ng-repeat="page in visitedPages track by page.id"></download-item>
 			</div>
 		</div>
+		<!--list of torrents-->
+		<div class="row" ng-if="numKeys(torrents)>0">
+			<div class="column">
+				<h3>Torrents :</h3>
+			</div>
+		</div>
+		<div class="row">
+			<div class="column">
+				<download-item ng-repeat="page in torrents track by page.id"></download-item>
+			</div>
+		</div>
 
 		<script src="libs/jquery/jquery.min.js"></script>
 		<script src="libs/semantic/dist/semantic.min.js"></script>
@@ -87,6 +98,10 @@
 		<!--download item-->
 		<script src="parts/downloadItem/downloadItem.js"></script>
 		<link rel="stylesheet" type="text/css" href="parts/downloadItem/downloadItem.css">
+		<!--directory-->
+		<script src="parts/directory/directory.js"></script>
+		<link rel="stylesheet" type="text/css" href="parts/directory/directory.css">
+
 </body>
 
 </html>

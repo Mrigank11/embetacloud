@@ -1,0 +1,9 @@
+<div class="directoryName" ng-click="toggle()">
+    <i class="ui icon" ng-class="{
+        'open':dir.showChildren,
+        'folder':dir.children.length>0,
+        'file':dir.children.length==0
+        }"></i>
+    <span ng-if="dir.children.length>0">{{dir.name}}</span>
+    <a ng-if="dir.children.length==0" href="{{href}}/{{dir.name}}">{{dir.name}}</a>
+</div>

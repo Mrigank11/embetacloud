@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "sourceMap": true
+        "module": "commonjs"
     },
     "exclude": [
         "node_modules",
