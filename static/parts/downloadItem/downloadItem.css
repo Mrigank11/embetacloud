@@ -1,0 +1,45 @@
+download-item{
+    padding: 5px;
+}
+.muted{
+    color: #cccaca;
+    font-weight: 100;
+}
+.download-progress{
+    font-size: smaller;
+    font-family: monospace;
+    color: grey;
+}
+.download-controls{
+    padding: 10px;
+}
+.download-msg{
+    font-size: x-small;
+    font-weight: 900;
+    padding: 5px 0px;
+}
+.download-msg span{
+    padding-left: 5px;
+    font-family: monospace;
+    color: #504b4b;
+    animation: blink 3s infinite;
+    font-size: 0.9rem;
+}
+.download-percent{
+    font-size: larger;
+    font-weight: bold;
+}
+@keyframes blink{
+    from{
+        opacity:1;
+    }
+    50%{
+        opacity:0.5;
+    }
+    to{
+        opacity:1;
+    }
+}
+.directoryContainer{
+    margin-top:-20px    !important;
+}

@@ -1,0 +1,44 @@
+<div class="ui fluid segment">
+	<div class="ui stackable grid">
+		<div class="row">
+			<!--the pin-->
+			<div class="one wide computer two wide mobile column">
+				<i class="icon circular teal pin link" ng-class="{'inverted':page.pinned}" ng-click="togglePin(page)"></i>
+			</div>
+			<!--download info-->
+			<div class="eight wide mobile eight wide computer column">
+				<div class="truncate_text" ng-if="!page.isTorrent" title="{{page.url}}">{{page.url}}</div>
+				<div class="truncate_text" ng-if="page.isTorrent" title="{{page.name}}">{{page.name}}</div>
+				<div class="download-msg">><span>{{page.msg ? page.msg:('Download'+((page.progress==100)?'ed':'ing')+' to cloud')}}</span></div>
+				<div class="ui small indicating progress" ng-class="{'active':(page.progress > 0 && page.progress < 100)}" data-percent="{{page.progress}}">
+					<div class="bar" style="width:{{page.progress}}%">
+
+					</div>
+				</div>
+			</div>
+			<!--controls and progress-->
+			<div class="six wide mobile six wide computer right floated right aligned column">
+				<div class="download-controls">
+					<i class="ui circular green download icon" ng-if="!page.isTorrent" ng-click="downloadToPC(page)" ng-class="{'disabled':page.progress<100,'link':page.progress==100}"></i>
+					<i class="ui circular blue icon" ng-if="page.isTorrent" ng-class="{
+						'link':!page.gettingDirStructure,
+						'disabled':page.gettingDirStructure,
+						'spinner':page.gettingDirStructure,
+						'loading':page.gettingDirStructure,
+						'folder':!page.gettingDirStructure
+						}" ng-click="showTorrentFiles(page)"></i>
+					<i class="ui circular orange inverted cloud icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!(page.progress==100 && status.logged),'link':status.logged}"></i>
+				</div>
+				<div class="download-progress">
+					{{page.downloaded}}/{{page.size}}-<span class="download-percent">{{page.progress}}%</span>-<b ng-class="{'muted':(page.speed == '0 B/s')}">{{page.speed}}</b>
+				</div>
+			</div>
+		</div>
+		<div class="row" ng-if="page.isTorrent && page.showFiles">
+			<div class="one wide column"></div>
+			<div class="fifteen wide column directoryContainer">
+				<directory dir="dir" href="'/files/'+page.id" torrent="page" ng-repeat="dir in page.dirStructure"></directory>
+			</div>
+		</div>
+	</div>
+</div>

@@ -4,24 +4,31 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/server.js",
+    "postinstall": "gulp && tsc -p ."
   },
   "author": "Mrigank Krishan",
   "license": "ISC",
   "dependencies": {
+    "debug": "^2.3.2",
     "express": "^4.14.0",
     "express-session": "^1.14.1",
     "googleapis": "^14.0.0",
+    "gulp": "^3.9.1",
     "http-proxy": "^1.14.0",
     "mime": "^1.3.4",
+    "pretty-bytes": "^4.0.2",
+    "promise": "^7.1.1",
     "semantic-ui": "^2.2.6",
     "shortid": "^2.2.6",
     "socket.io": "^1.5.0",
+    "thepiratebay": "^1.3.2",
+    "torrent-stream": "^1.0.3",
+    "typescript": "^2.0.6",
     "unblocker": "^1.1.4",
     "url": "^0.11.0"
   },
-  "cacheDirectories": [
-    "node_modules",
-    "libs/semantic"
-  ]
+  "engines": {
+    "node": "6.9.1"
+  }
 }

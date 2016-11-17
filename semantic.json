@@ -8,25 +8,31 @@
       "themes": "src/themes/"
     },
     "output": {
-      "packaged": "dist/",
-      "uncompressed": "dist/components/",
-      "compressed": "dist/components/",
-      "themes": "dist/themes/"
+      "packaged": "dist\\",
+      "uncompressed": "dist\\components\\",
+      "compressed": "dist\\components\\",
+      "themes": "dist\\themes\\"
     },
     "clean": "dist/"
   },
   "permission": false,
   "autoInstall": true,
   "rtl": false,
-  "version": "2.2.6",
   "components": [
     "reset",
     "site",
     "button",
-    "progress",
-    "grid",
     "container",
+    "icon",
     "input",
-	"icon"
-  ]
+    "list",
+    "segment",
+    "form",
+    "grid",
+    "item",
+    "progress",
+    "form",
+    "message"
+  ],
+  "version": "2.2.6"
 }
