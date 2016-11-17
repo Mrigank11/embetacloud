@@ -294,6 +294,8 @@ io.on('connection', function(client) {
                 uploaded = uploaded + data.size;
                 var name = data.name;
                 torrents[id].msg = "Uploaded %s successfully | Total: " + percentage(uploaded / dirSize) + "%";
+                torrents[id].progress = percentage(uploaded / dirSize);
+                sendTorrentsUpdate(io, id);
             }
         });
         CLOUD.on('progress', (data) => {
