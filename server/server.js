@@ -260,6 +260,9 @@ io.on('connection', function (client) {
             });
         });
         torrentObjs[uniqid].on("progress", function (data) {
+            if (torrents[uniqid].progress == 100) {
+                return false;
+            }
             var speed = prettyBytes(data.speed) + '/s';
             var downloaded = prettyBytes(data.downloadedLength);
             var progress = percentage((data.downloadedLength / torrents[uniqid].length));
