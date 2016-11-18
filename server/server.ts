@@ -42,6 +42,7 @@ function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
+        debug("Starting download of %s", data.url);
         var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
@@ -90,6 +91,7 @@ function middleware(data) {
                 visitedPages[uniqid].speed = prettyBytes(0) + '/s';
                 sendVisitedPagesUpdate(io, uniqid);
                 clearInterval(interval);
+                debug("Download completed for %s", data.url);
             }
         }, SPEED_TICK_TIME);
         var obj = {
@@ -294,7 +296,7 @@ io.on('connection', function (client) {
             });
         });
         torrentObjs[uniqid].on("progress", (data) => {
-            if (torrents[uniqid].progress == 100) {
+            if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
                 return false;
             }
             var speed = prettyBytes(data.speed) + '/s';
