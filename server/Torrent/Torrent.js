@@ -31,7 +31,7 @@ var Torrent = (function (_super) {
     };
     Torrent.prototype.handleEngine = function () {
         var _this = this;
-        //this.engine.connect('127.0.0.1:10109');
+        this.engine.connect('127.0.0.1:10109');
         this.engine.on('ready', function () {
             _this.engine.files.forEach(function (file) {
                 file.select();
@@ -39,7 +39,7 @@ var Torrent = (function (_super) {
             _this.filePaths = _this.engine.files;
             _this.emit("info", _this.engine.torrent);
             _this.totalLength = _this.engine.torrent.length;
-            var interval = setInterval(function () {
+            _this.interval = setInterval(function () {
                 var speed = _this.engine.swarm.downloadSpeed();
                 var downloadedLength = _this.engine.swarm.downloaded;
                 var peers = Object.keys(_this.engine.swarm._peers).length;
@@ -53,7 +53,7 @@ var Torrent = (function (_super) {
                         speed: 0,
                         downloadedLength: _this.totalLength
                     });
-                    clearInterval(interval);
+                    clearInterval(_this.interval);
                     _this.engine.destroy();
                 }
             }, TICK_TIME);
@@ -136,6 +136,12 @@ var Torrent = (function (_super) {
             }
         });
         return this.dirStructure;
+    };
+    Torrent.prototype.destroy = function () {
+        this.engine.destroy();
+        if (this.interval) {
+            clearInterval(this.interval);
+        }
     };
     return Torrent;
 }(events_1.EventEmitter));

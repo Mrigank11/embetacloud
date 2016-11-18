@@ -5,6 +5,12 @@ to your PC.
 
 Somebody is requested to upload it to a high-speed server so that it's made open to all.
 
+# Features
+- Single Page UI (made with semantic-ui and angularJS)
+- Responsive UI
+- Realtime information update
+- Support for **torrents**
+
 # Usage
 First clone the repo and install dependencies:
 ```js

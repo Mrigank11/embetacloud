@@ -6,7 +6,7 @@ const PirateBay = require('thepiratebay');
 const prettyBytes = require('pretty-bytes');
 const debug = require('debug')("eMCloud::Server");
 const socketIO = require("socket.io");
-import * as FILE from 'fs';
+const FILE = require("fs-extra");
 import * as mime from 'mime';
 import * as http from 'http';
 import * as torrentStream from 'torrent-stream';
@@ -31,6 +31,7 @@ var visitedPages = {};
 var torrents = {};
 var torrentObjs = {};
 const CLOUD = new GDrive();
+var incognitoSessions = [];
 
 function percentage(n): any {
     var p = (Math.round(n * 1000) / 10);
@@ -38,10 +39,10 @@ function percentage(n): any {
 }
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
-    var uniqid = shortid.generate();
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
+        var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
@@ -116,7 +117,8 @@ function sendTorrentsUpdate(socket, id) {
     socket.emit('setKey', {
         name: 'torrents',
         key: id,
-        value: torrents[id]
+        value: torrents[id],
+        ignore: ["dirStructure", "showFiles"]
     });
 }
 
@@ -132,7 +134,7 @@ SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
 app.get('/oauthCallback', (req, res) => {
@@ -141,7 +143,7 @@ app.get('/oauthCallback', (req, res) => {
     if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function(err, tokens) {
+        oauth2Client.getToken(code, function (err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
@@ -154,12 +156,14 @@ app.get('/oauthCallback', (req, res) => {
         res.send('Invalid Attempt[E03]');
     }
 });
-io.use(function(socket, next) {
+io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
 
-io.on('connection', function(client) {
+io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
+    client.conn.request.session.abcd = "abcd";
+    client.conn.request.session.save();
     if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
@@ -195,6 +199,28 @@ io.on('connection', function(client) {
             }
         });
     });
+    client.on('clearTorrents', () => {
+        Object.keys(torrents).forEach((id) => {
+            if (!torrents[id].pinned) {
+                io.emit("deleteKey", {
+                    name: 'torrents',
+                    key: id
+                });
+                if (torrents[id].progress == 100) {
+                    //  download completed but user requested to clear
+                    // delete downloaded file
+                    FILE.remove(path.join(FILES_PATH, id));
+                    delete torrents[id];
+                    delete torrentObjs[id];
+                } else {
+                    delete torrents[id];
+                    torrentObjs[id].destroy();
+                    delete torrentObjs[id];
+                    FILE.remove(path.join(FILES_PATH, id));
+                }
+            }
+        });
+    });
     client.on('saveToDrive', (data) => {
         var obj = data.data;
         var stream = FILE.createReadStream(path.join(FILES_PATH, '../', obj.path));
@@ -218,9 +244,17 @@ io.on('connection', function(client) {
         });
     });
     client.on('pin', (data) => {
+        if (data.isTorrent) {
+            torrents[data.page.id].pinned = true;
+            return false;
+        }
         visitedPages[data.page.id].pinned = true;
     });
     client.on('unpin', (data) => {
+        if (data.isTorrent) {
+            torrents[data.page.id].pinned = false;
+            return false;
+        }
         visitedPages[data.page.id].pinned = false;
     });
     client.on('pirateSearch', (data) => {
@@ -319,6 +353,13 @@ io.on('connection', function(client) {
     client.on("updateTorrentObj", (data) => {
         var obj = data.obj;
         torrents[obj.id] = obj;
+    });
+    client.on("toggleIncognito", () => {
+        if (incognitoSessions.indexOf(sessionID) > -1) {
+            incognitoSessions.splice(incognitoSessions.indexOf(sessionID));
+        } else {
+            incognitoSessions.push(sessionID);
+        }
     });
 });
 

@@ -2,37 +2,38 @@ var socket = io.connect();
 var app = angular.module("app", []);
 const parts = ['downloadItem'];
 
-app.controller("main", function ($scope, $timeout, server) {
+app.controller("main", function ($scope, $timeout) {
     //Init
     $scope.visitedPages = {};
     $scope.torrents = {};
     $scope.currentSearchPage = 0;
     $scope.connected = false;
     $scope.search = { loading: false, results: null };
+    $scope.incognito = false;
     //socket emits
     socket.on('setKey', function (data) {
         var name = data.name;
         var key = data.key;
         var value = data.value;
         $timeout(function () {
-            $scope[name][key] = value;
+            if (data.ignore && $scope[name][key] && typeof (value) == "object") {
+                var ignoreKeys = data.ignore;
+                var keys = Object.keys(value);
+                keys.forEach(function (k) {
+                    if (!(ignoreKeys.includes(k) && $scope[name][key][k])) {
+                        $scope[name][key][k] = value[k];
+                    }
+                })
+            } else {
+                $scope[name][key] = value;
+            }
         });
     });
     socket.on('setObj', function (data) {
         var name = data.name;
         var value = data.value;
         $timeout(function () {
-            if (data.ignore && typeof (value) == "object" && $scope[name]) {
-                var ignoreValues = data.ignore;
-                var keys = Object.keys(value);
-                keys.forEach(function (key) {
-                    if (!ignoreValues.includes(key)) {
-                        $scope[name][key] = value[key];
-                    }
-                })
-            } else {
-                $scope[name] = value;
-            }
+            $scope[name] = value;
         });
     })
     socket.on('deleteKey', function (data) {
@@ -57,10 +58,10 @@ app.controller("main", function ($scope, $timeout, server) {
     //Functions
     $scope.togglePin = function (page) {
         if (page.pinned) {
-            socket.emit('unpin', { page: page });
+            socket.emit('unpin', { page: page, isTorrent: page.isTorrent });
             page.pinned = false;
         } else {
-            socket.emit('pin', { page: page });
+            socket.emit('pin', { page: page, isTorrent: page.isTorrent });
             page.pinned = true;
         }
     }
@@ -91,6 +92,14 @@ app.controller("main", function ($scope, $timeout, server) {
             }
         });
         socket.emit('clearVisitedPages');
+    }
+    $scope.clearTorrents = function () {
+        Object.keys($scope.torrents).forEach((id) => {
+            if (!$scope.torrents[id].pinned) {
+                delete $scope.torrents[id];
+            }
+        });
+        socket.emit('clearTorrents');
     }
     $scope.redirectToLoginUrl = function (url) {
         if (!$scope.status.logged) {
@@ -143,13 +152,11 @@ app.controller("main", function ($scope, $timeout, server) {
     $scope.showTorrentFiles = function (obj) {
         if (obj.showFiles) {
             obj.showFiles = false;
-            server.updateTorrentObj(obj);
             return false;
         }
         if (obj.dirStructure) {
             //already have dirStructure
             obj.showFiles = true;
-            server.updateTorrentObj(obj);
         } else {
             //request server for dirStructure
             obj.msg = "Getting directory structure";
@@ -157,12 +164,8 @@ app.controller("main", function ($scope, $timeout, server) {
             socket.emit('getDirStructure', { id: obj.id });
         }
     }
-});
-
-app.factory('server', function () {
-    var functions = {};
-    functions.updateTorrentObj = function (torrentObj) {
-        //socket.emit('updateTorrentObj', { obj: torrentObj });
+    $scope.toggleIncognito = function () {
+        $scope.incognito = !$scope.incognito;
+        socket.emit("toggleIncognito");
     }
-    return functions;
 });
