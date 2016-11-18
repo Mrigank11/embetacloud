@@ -116,7 +116,8 @@ function sendTorrentsUpdate(socket, id) {
     socket.emit('setKey', {
         name: 'torrents',
         key: id,
-        value: torrents[id]
+        value: torrents[id],
+        ignore: ['dirStructure', 'showFiles']
     });
 }
 
