@@ -13,6 +13,7 @@ export class Torrent extends EventEmitter {
     private totalLength;
     private filePaths: Array<any>;
     private dirStructure: Array<Dir>;
+    private interval;
 
     constructor(magnet: string, folderPath: string, uniqid: string) {
         super();
@@ -32,7 +33,7 @@ export class Torrent extends EventEmitter {
         });
     }
     private handleEngine() {
-        //this.engine.connect('127.0.0.1:10109');
+        this.engine.connect('127.0.0.1:10109');
         this.engine.on('ready', () => {
             this.engine.files.forEach(function(file) {
                 file.select();
@@ -40,7 +41,7 @@ export class Torrent extends EventEmitter {
             this.filePaths = this.engine.files;
             this.emit("info", this.engine.torrent);
             this.totalLength = this.engine.torrent.length;
-            var interval = setInterval(() => {
+            this.interval = setInterval(() => {
                 var speed = this.engine.swarm.downloadSpeed();
                 var downloadedLength = this.engine.swarm.downloaded;
                 var peers = Object.keys(this.engine.swarm._peers).length;
@@ -54,7 +55,7 @@ export class Torrent extends EventEmitter {
                         speed: 0,
                         downloadedLength: this.totalLength
                     });
-                    clearInterval(interval);
+                    clearInterval(this.interval);
                     this.engine.destroy();
                 }
             }, TICK_TIME);
@@ -131,6 +132,12 @@ export class Torrent extends EventEmitter {
             }
         });
         return this.dirStructure;
+    }
+    public destroy() {
+        this.engine.destroy();
+        if (this.interval) {
+            clearInterval(this.interval);
+        }
     }
 }
 

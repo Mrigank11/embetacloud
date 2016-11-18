@@ -28,7 +28,7 @@
 						'link':(!status || !status.logged),
 						'user':status
 					}"></i>
-				<i class="ui trash circular link icon" title="Clear All Requests" ng-click="clearVisitedPages()"></i>
+				<i class="ui lock link circular icon" ng-click="toggleIncognito()" ng-class="{'inverted':incognito,'red':incognito}" title="Incognito"></i>
 				<i class="ui lightning circular icon" ng-class="{'green':connected,'red':!connected}"></i>
 			</div>
 		</div>
@@ -73,6 +73,14 @@
 			</div>
 		</div>
 		<!--list of downloads-->
+		<div class="row" ng-if="numKeys(visitedPages)>0">
+			<div class="ten wide column">
+				<h3>Downloads: </h3>
+			</div>
+			<div class="right floated right aligned column">
+				<i class="ui trash link icon" title="Clear All Requests" ng-click="clearVisitedPages()"></i>
+			</div>
+		</div>
 		<div class="row">
 			<div class="column">
 				<download-item ng-repeat="page in visitedPages track by page.id"></download-item>
@@ -80,8 +88,11 @@
 		</div>
 		<!--list of torrents-->
 		<div class="row" ng-if="numKeys(torrents)>0">
-			<div class="column">
+			<div class="ten wide column">
 				<h3>Torrents :</h3>
+			</div>
+			<div class="right floated right aligned column">
+				<i class="trash link icon" ng-click="clearTorrents()"></i>
 			</div>
 		</div>
 		<div class="row">
