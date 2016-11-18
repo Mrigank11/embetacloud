@@ -42,6 +42,7 @@ function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
+        debug("Starting download of %s", data.url);
         var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
         var downloadedLength = 0;
@@ -90,6 +91,7 @@ function middleware(data) {
                 visitedPages[uniqid].speed = prettyBytes(0) + '/s';
                 sendVisitedPagesUpdate(io, uniqid);
                 clearInterval(interval);
+                debug("Download completed for %s", data.url);
             }
         }, SPEED_TICK_TIME);
         var obj = {
@@ -134,7 +136,7 @@ SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function (req, res) {
+app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
 app.get('/oauthCallback', (req, res) => {
@@ -143,7 +145,7 @@ app.get('/oauthCallback', (req, res) => {
     if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function (err, tokens) {
+        oauth2Client.getToken(code, function(err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
@@ -156,11 +158,11 @@ app.get('/oauthCallback', (req, res) => {
         res.send('Invalid Attempt[E03]');
     }
 });
-io.use(function (socket, next) {
+io.use(function(socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
 
-io.on('connection', function (client) {
+io.on('connection', function(client) {
     var sessionID = client.conn.request.sessionID;
     client.conn.request.session.abcd = "abcd";
     client.conn.request.session.save();
