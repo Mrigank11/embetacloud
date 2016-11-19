@@ -136,7 +136,7 @@ SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
 app.get('/oauthCallback', (req, res) => {
@@ -145,7 +145,7 @@ app.get('/oauthCallback', (req, res) => {
     if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function(err, tokens) {
+        oauth2Client.getToken(code, function (err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
@@ -158,11 +158,11 @@ app.get('/oauthCallback', (req, res) => {
         res.send('Invalid Attempt[E03]');
     }
 });
-io.use(function(socket, next) {
+io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
 
-io.on('connection', function(client) {
+io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
     client.conn.request.session.abcd = "abcd";
     client.conn.request.session.save();
@@ -296,7 +296,7 @@ io.on('connection', function(client) {
             });
         });
         torrentObjs[uniqid].on("progress", (data) => {
-            if (torrents[uniqid].progress == 100) {
+            if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
                 return false;
             }
             var speed = prettyBytes(data.speed) + '/s';
