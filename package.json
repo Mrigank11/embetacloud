@@ -13,6 +13,7 @@
     "debug": "^2.3.2",
     "express": "^4.14.0",
     "express-session": "^1.14.1",
+    "fs-extra": "^1.0.0",
     "googleapis": "^14.0.0",
     "gulp": "^3.9.1",
     "http-proxy": "^1.14.0",
