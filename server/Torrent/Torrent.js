@@ -31,7 +31,7 @@ var Torrent = (function (_super) {
     };
     Torrent.prototype.handleEngine = function () {
         var _this = this;
-        this.engine.connect('127.0.0.1:10109');
+        //this.engine.connect('127.0.0.1:10109');
         this.engine.on('ready', function () {
             _this.engine.files.forEach(function (file) {
                 file.select();

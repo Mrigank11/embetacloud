@@ -33,7 +33,7 @@ export class Torrent extends EventEmitter {
         });
     }
     private handleEngine() {
-        this.engine.connect('127.0.0.1:10109');
+        //this.engine.connect('127.0.0.1:10109');
         this.engine.on('ready', () => {
             this.engine.files.forEach(function(file) {
                 file.select();
