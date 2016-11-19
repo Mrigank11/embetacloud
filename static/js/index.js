@@ -1,6 +1,5 @@
 var socket = io.connect();
 var app = angular.module("app", []);
-const parts = ['downloadItem'];
 
 app.controller("main", function ($scope, $timeout) {
     //Init
