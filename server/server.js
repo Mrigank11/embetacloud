@@ -1,6 +1,6 @@
 "use strict";
 //Requires
-var Unblocker = require('unblocker');
+var unblocker = require('./unblocker.js');
 var shortid = require('shortid');
 var session = require('express-session');
 var PirateBay = require('thepiratebay');
@@ -39,7 +39,7 @@ function percentage(n) {
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
-    if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
+    if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/') && data.headers['content-length']) {
         debug("Starting download of %s", data.url);
         var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
@@ -127,7 +127,8 @@ var sessionMiddleware = session({
 });
 //set up express
 app.use(sessionMiddleware);
-app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
+//set up unblocker
+app.use(unblocker(middleware));
 SERVER_DIRS.forEach(function (dir) {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });

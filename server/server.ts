@@ -1,5 +1,5 @@
 //Requires
-const Unblocker = require('unblocker');
+const unblocker = require('./unblocker.js');
 const shortid = require('shortid');
 const session = require('express-session');
 const PirateBay = require('thepiratebay');
@@ -44,7 +44,7 @@ function percentage(n): any {
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
-    if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/')) {
+    if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/') && data.headers['content-length']) {
         debug("Starting download of %s", data.url);
         var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
@@ -135,12 +135,14 @@ var sessionMiddleware = session({
 
 //set up express
 app.use(sessionMiddleware);
-app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
+//set up unblocker
+
+app.use(unblocker(middleware));
 SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function (req, res) {
+app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
 app.get('/oauthCallback', (req, res) => {
@@ -149,7 +151,7 @@ app.get('/oauthCallback', (req, res) => {
     if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function (err, tokens) {
+        oauth2Client.getToken(code, function(err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
@@ -163,11 +165,11 @@ app.get('/oauthCallback', (req, res) => {
     }
 });
 // set up socket.io to use sessions
-io.use(function (socket, next) {
+io.use(function(socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
 //handle socket.io connections
-io.on('connection', function (client) {
+io.on('connection', function(client) {
     var sessionID = client.conn.request.sessionID;
     if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
@@ -369,14 +371,14 @@ io.on('connection', function (client) {
             store: true // Sets the compression method to STORE.
         });
         // listen for all archive data to be written
-        output.on('close', function () {
+        output.on('close', function() {
             debug("Zipped %s successfully", id);
             torrents[id].zipping = false;
             torrents[id].msg = "Zipped Successfully"
             torrents[id].zipExists = true;
             sendTorrentsUpdate(io, id);
         });
-        archive.on('error', function (err) {
+        archive.on('error', function(err) {
             debug("Error while zipping %s : %s", id, err);
         });
         // pipe archive data to the file
