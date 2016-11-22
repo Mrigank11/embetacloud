@@ -28,7 +28,7 @@
 						'folder':!page.gettingDirStructure
 						}" ng-click="showTorrentFiles(page)"></i>
 					<i title="Upload to Drive" class="ui circular orange inverted cloud upload icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!(getProgress(page)==100 && status.logged),'link':status.logged}"></i>
-					<i title="Zip and download" class="ui circular brown icon" ng-class="{	
+					<i title="Zip and download" ng-if="page.isTorrent" class="ui circular brown icon" ng-class="{	
 						'loading':page.zipping,
 						'spinner':page.zipping,
 						'zip':!page.zipping,
