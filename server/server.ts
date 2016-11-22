@@ -387,6 +387,7 @@ io.on('connection', function (client) {
         archive.on("data", (chunk) => {
             zippedLength += chunk.length;
             torrents[id].msg = "Zipping : " + percentage(zippedLength / torrents[id].length) + "%";
+            torrents[id].zipping = true;
             sendTorrentsUpdate(io, id);
         });
     });
@@ -405,6 +406,7 @@ io.on('connection', function (client) {
         CLOUD.on("progress", (data) => {
             if (data.id == id && data.type == "file" && data.name == name) {
                 torrents[id].msg = "Uploading Zip: " + percentage(data.uploaded / data.size) + "%";
+                torrents[id].zipping = true;
                 sendTorrentsUpdate(io, id);
             }
         });
