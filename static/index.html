@@ -37,7 +37,7 @@
 			<div class="column">
 				<form onsubmit="return false;" ng-submit="processForm()">
 					<div class="ui fluid action input">
-						<input type="text" ng-model="url" ng-keydown="console.log($event.keyCode)" placeholder="Enter url to open, magnet or search torrent...">
+						<input type="text" ng-change="search.results=false" ng-model="url" ng-keydown="console.log($event.keyCode)" placeholder="Enter url to open, magnet or search torrent...">
 
 						<button type="submit" class="ui tiny button" ng-if="urlType()=='url'">Open</button>
 						<button type="submit" class="ui tiny button " ng-class="{'loading':magnetLoading}" ng-if="urlType()=='search'">Search</button>
@@ -100,18 +100,18 @@
 				<download-item ng-repeat="page in torrents track by page.id"></download-item>
 			</div>
 		</div>
-
-		<script src="libs/jquery/jquery.min.js"></script>
-		<script src="libs/semantic/dist/semantic.min.js"></script>
-		<script src="libs/angular/angular.min.js"></script>
-		<script src="/socket.io/socket.io.js"></script>
-		<script src="js/index.js"></script>
-		<!--download item-->
-		<script src="parts/downloadItem/downloadItem.js"></script>
-		<link rel="stylesheet" type="text/css" href="parts/downloadItem/downloadItem.css">
-		<!--directory-->
-		<script src="parts/directory/directory.js"></script>
-		<link rel="stylesheet" type="text/css" href="parts/directory/directory.css">
+	</div>
+	<script src="libs/jquery/jquery.min.js"></script>
+	<script src="libs/semantic/dist/semantic.min.js"></script>
+	<script src="libs/angular/angular.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="js/index.js"></script>
+	<!--download item-->
+	<script src="parts/downloadItem/downloadItem.js"></script>
+	<link rel="stylesheet" type="text/css" href="parts/downloadItem/downloadItem.css">
+	<!--directory-->
+	<script src="parts/directory/directory.js"></script>
+	<link rel="stylesheet" type="text/css" href="parts/directory/directory.css">
 
 </body>
 

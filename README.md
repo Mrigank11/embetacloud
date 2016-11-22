@@ -11,6 +11,8 @@ Somebody is requested to upload it to a high-speed server so that it's made open
 - Realtime information update
 - Support for **torrents**
 - Can upload complete folders to Google Drive with click of a button
+- Zip and download torrents
+- Zip and upload torrents to Drive
 
 # Usage
 First clone the repo and install dependencies:

@@ -10,6 +10,7 @@
   "author": "Mrigank Krishan",
   "license": "ISC",
   "dependencies": {
+    "archiver": "^1.2.0",
     "debug": "^2.3.2",
     "express": "^4.14.0",
     "express-session": "^1.14.1",
