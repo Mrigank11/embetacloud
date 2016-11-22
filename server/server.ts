@@ -358,7 +358,7 @@ io.on('connection', function (client) {
             }
         });
     });
-    client.on("zipAndDownload", (data) => {
+    client.on("zip", (data) => {
         //exclusively for torrents
         var id = data.id;
         var zippedLength = 0;
@@ -381,7 +381,7 @@ io.on('connection', function (client) {
         });
         // pipe archive data to the file
         archive.pipe(output);
-        archive.directory(path.join(FILES_PATH, id));
+        archive.directory(path.join(FILES_PATH, id), false);
         archive.finalize();
         //listen for progress
         archive.on("data", (chunk) => {
