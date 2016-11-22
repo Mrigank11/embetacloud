@@ -401,7 +401,7 @@ io.on('connection', function (client) {
         var id = data.id;
         var name = data.name;
         var loc = path.join(FILES_PATH, id + ".zip");
-        CLOUD.uploadFile(FILE.createReadStream(loc), torrents[id].length, mime.lookup(loc), name, oauth2ClientArray[sessionID]);
+        CLOUD.uploadFile(FILE.createReadStream(loc), torrents[id].length, mime.lookup(loc), name, oauth2ClientArray[sessionID], false, false, id);
         CLOUD.on("progress", (data) => {
             if (data.id == id && data.type == "file" && data.name == name) {
                 torrents[id].msg = "Uploading Zip: " + percentage(data.uploaded / data.size) + "%";
@@ -409,7 +409,7 @@ io.on('connection', function (client) {
             }
         });
         CLOUD.on("fileDownloaded", (data) => {
-            if (data.id == id && data.type == "file" && data.name == name) {
+            if (data.id == id && data.name == name) {
                 torrents[id].msg = "Uploaded Zip Successfully";
                 torrents[id].zipping = false;
                 sendTorrentsUpdate(io, id);
