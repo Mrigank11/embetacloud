@@ -22,6 +22,8 @@ You have to make a google developers project and set the following environment v
 - GOOGLE_CLIENT_SECRET
 - GOOGLE_REDIRECT_URL (it should be &lt;server address&gt;/oauthCallback by default)
 
+Ensure that you request full google drive access permission and basic G+ info in your google project 
+
 To start server, run:
 ```js
 npm start
