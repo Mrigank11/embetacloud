@@ -167,4 +167,11 @@ app.controller("main", function ($scope, $timeout) {
         $scope.incognito = !$scope.incognito;
         socket.emit("toggleIncognito");
     }
+    $scope.getProgress = function (page) {
+        if (page.progress == 100 && page.cloudUploadProgress) {
+            return page.cloudUploadProgress;
+        } else {
+            return page.progress;
+        }
+    }
 });

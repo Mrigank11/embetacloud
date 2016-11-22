@@ -12,8 +12,7 @@ var path = require('path');
 var events_1 = require('events');
 var CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 var CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-var REDIRECT_URL = 'https://embetacloud.herokuapp.com/oauthCallback';
-//const REDIRECT_URL = 'http://127.0.0.1:3000/oauthCallback';
+var REDIRECT_URL = process.env.GOOGLE_REDIRECT_URL;
 var SCOPES = [
     'https://www.googleapis.com/auth/plus.me',
     'https://www.googleapis.com/auth/drive'
