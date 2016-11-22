@@ -7,6 +7,8 @@ const prettyBytes = require('pretty-bytes');
 const debug = require('debug')("eMCloud::Server");
 const socketIO = require("socket.io");
 const FILE = require("fs-extra");
+const archiver = require("archiver");
+
 import * as mime from 'mime';
 import * as http from 'http';
 import * as torrentStream from 'torrent-stream';
@@ -14,6 +16,7 @@ import * as path from 'path';
 import { GDrive } from './GDrive/GDrive';
 import { Torrent } from './Torrent/Torrent';
 import * as express from 'express';
+import * as url from 'url';
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
@@ -212,6 +215,7 @@ io.on('connection', function (client) {
                     //  download completed but user requested to clear
                     // delete downloaded file
                     FILE.remove(path.join(FILES_PATH, id));
+                    FILE.remove(path.join(FILES_PATH, id + ".zip"));
                     delete torrents[id];
                     delete torrentObjs[id];
                 } else {
@@ -286,7 +290,6 @@ io.on('connection', function (client) {
                 size: prettyBytes(info.length),
                 isTorrent: true,
                 length: info.length,
-                showFiles: false,
                 msg: 'Connecting to peers'
             };
             sendTorrentsUpdate(client, uniqid);
@@ -316,7 +319,10 @@ io.on('connection', function (client) {
         torrents[id].gettingDirStructure = false;
         torrents[id].dirStructure = dirStructure;
         torrents[id].msg = 'Got directory structure';
+        torrents[id].showFiles = true;
         sendTorrentsUpdate(client, id);
+        //fix directory structure not hidden after page reload
+        torrents[id].showFiles = false;
     });
     client.on("uploadDirToDrive", (data) => {
         var id = data.id;
@@ -352,6 +358,38 @@ io.on('connection', function (client) {
             }
         });
     });
+    client.on("zipAndDownload", (data) => {
+        //exclusively for torrents
+        var id = data.id;
+        var zippedLength = 0;
+        //no need to check if zip exists
+        //event will emit only if zipExists is not set
+        var output = FILE.createWriteStream(path.join(FILES_PATH, id + ".zip"));
+        var archive = archiver('zip', {
+            store: true // Sets the compression method to STORE.
+        });
+        // listen for all archive data to be written
+        output.on('close', function () {
+            debug("Zipped %s successfully", id);
+            torrents[id].zipping = false;
+            torrents[id].msg = "Zipped Successfully"
+            torrents[id].zipExists = true;
+            sendTorrentsUpdate(io, id);
+        });
+        archive.on('error', function (err) {
+            debug("Error while zipping %s : %s", id, err);
+        });
+        // pipe archive data to the file
+        archive.pipe(output);
+        archive.directory(path.join(FILES_PATH, id));
+        archive.finalize();
+        //listen for progress
+        archive.on("data", (chunk) => {
+            zippedLength += chunk.length;
+            torrents[id].msg = "Zipping : " + percentage(zippedLength / torrents[id].length) + "%";
+            sendTorrentsUpdate(io, id);
+        });
+    });
     client.on("toggleIncognito", () => {
         if (incognitoSessions.indexOf(sessionID) > -1) {
             incognitoSessions.splice(incognitoSessions.indexOf(sessionID));
@@ -359,6 +397,25 @@ io.on('connection', function (client) {
             incognitoSessions.push(sessionID);
         }
     });
+    client.on("uploadZipToCloud", (data) => {
+        var id = data.id;
+        var name = data.name;
+        var loc = path.join(FILES_PATH, id + ".zip");
+        CLOUD.uploadFile(FILE.createReadStream(loc), torrents[id].length, mime.lookup(loc), name, oauth2ClientArray[sessionID]);
+        CLOUD.on("progress", (data) => {
+            if (data.id == id && data.type == "file" && data.name == name) {
+                torrents[id].msg = "Uploading Zip: " + percentage(data.uploaded / data.size) + "%";
+                sendTorrentsUpdate(io, id);
+            }
+        });
+        CLOUD.on("fileDownloaded", (data) => {
+            if (data.id == id && data.type == "file" && data.name == name) {
+                torrents[id].msg = "Uploaded Zip Successfully";
+                torrents[id].zipping = false;
+                sendTorrentsUpdate(io, id);
+            }
+        });
+    })
 });
 
 server.listen(PORT);

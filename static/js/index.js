@@ -174,4 +174,17 @@ app.controller("main", function ($scope, $timeout) {
             return page.progress;
         }
     }
+    $scope.zipAndDownload = function (page) {
+        if (page.zipExists) {
+            window.location.href = "files/" + page.id + ".zip";
+        } else {
+            page.zipping = true;
+            socket.emit("zipAndDownload", { id: page.id });
+        }
+    }
+    $scope.uploadZipToCloud = function (page) {
+        page.zipping = true;
+        var name = prompt("Enter file name");
+        socket.emit("uploadZipToCloud", { id: page.id, name: name });
+    }
 });
