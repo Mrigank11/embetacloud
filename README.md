@@ -17,6 +17,11 @@ First clone the repo and install dependencies:
 ```js
 npm install
 ```
+You have to make a google developers project and set the following environment variables:
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- GOOGLE_REDIRECT_URL (it should be &lt;server address&gt;/oauthCallback by default)
+
 To start server, run:
 ```js
 npm start
@@ -25,7 +30,7 @@ npm start
 eMbeta Cloud is [debug](https://github.com/visionmedia/debug) compatible, to get debug info set environment variable `DEBUG=eMCloud:*`
 and start server.
 
-# Work in progress
+# Upcoming Features
 - Incognito mode
 
 # How to contribute
