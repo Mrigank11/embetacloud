@@ -27,7 +27,7 @@
 						'loading':page.gettingDirStructure,
 						'folder':!page.gettingDirStructure
 						}" ng-click="showTorrentFiles(page)"></i>
-					<i title="Upload to Drive" class="ui circular orange inverted cloud icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!(getProgress(page)==100 && status.logged),'link':status.logged}"></i>
+					<i title="Upload to Drive" class="ui circular orange inverted cloud upload icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!(getProgress(page)==100 && status.logged),'link':status.logged}"></i>
 					<i title="Zip and download" class="ui circular brown icon" ng-class="{	
 						'loading':page.zipping,
 						'spinner':page.zipping,
@@ -35,7 +35,8 @@
 						'disabled':(page.progress<100 || page.zipping),
 						'link':(page.progress==100 && !page.zipping) 
 						}" ng-click="zipAndDownload(page)"></i>
-					<i title="Upload Zip to Cloud" class="ui circular green upload icon" ng-if="page.zipExists && !page.zipping" ng-click="uploadZipToCloud(page)"></i>
+					<i title="Upload Zip to Cloud" class="ui circular green link upload icon" ng-if="page.zipExists && status.logged && !page.zipping"
+						ng-click="uploadZipToCloud(page)"></i>
 				</div>
 				<div class="download-progress">
 					{{page.downloaded}}/{{page.size}}-<span class="download-percent">{{getProgress(page)}}%</span>-<b ng-class="{'muted':(page.speed == '0 B/s')}">{{page.speed}}</b>
