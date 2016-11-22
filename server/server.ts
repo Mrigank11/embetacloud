@@ -130,6 +130,7 @@ var sessionMiddleware = session({
     saveUninitialized: true
 });
 
+//set up express
 app.use(sessionMiddleware);
 app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
 SERVER_DIRS.forEach((dir) => {
@@ -158,14 +159,13 @@ app.get('/oauthCallback', (req, res) => {
         res.send('Invalid Attempt[E03]');
     }
 });
+// set up socket.io to use sessions
 io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
-
+//handle socket.io connections
 io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
-    client.conn.request.session.abcd = "abcd";
-    client.conn.request.session.save();
     if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
@@ -303,7 +303,7 @@ io.on('connection', function (client) {
             var downloaded = prettyBytes(data.downloadedLength);
             var progress = percentage((data.downloadedLength / torrents[uniqid].length));
             var peers = data.peers;
-            torrents[uniqid].speed = speed;
+            torrents[uniqid].speed = (progress == 100) ? prettyBytes(0) + '/s' : speed;
             torrents[uniqid].downloaded = downloaded;
             torrents[uniqid].progress = progress;
             torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
@@ -333,7 +333,7 @@ io.on('connection', function (client) {
                 uploaded = uploaded + data.size;
                 var name = data.name;
                 torrents[id].msg = "Uploaded " + name + " successfully | Total: " + percentage(uploaded / dirSize) + "%";
-                torrents[id].progress = percentage(uploaded / dirSize);
+                torrents[id].cloudUploadProgress = percentage(uploaded / dirSize);
                 sendTorrentsUpdate(io, id);
             }
         });
@@ -351,10 +351,6 @@ io.on('connection', function (client) {
                 }
             }
         });
-    });
-    client.on("updateTorrentObj", (data) => {
-        var obj = data.obj;
-        torrents[obj.id] = obj;
     });
     client.on("toggleIncognito", () => {
         if (incognitoSessions.indexOf(sessionID) > -1) {

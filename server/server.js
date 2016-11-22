@@ -124,6 +124,7 @@ var sessionMiddleware = session({
     resave: false,
     saveUninitialized: true
 });
+//set up express
 app.use(sessionMiddleware);
 app.use(new Unblocker({ prefix: '/proxy/', responseMiddleware: [middleware] }));
 SERVER_DIRS.forEach(function (dir) {
@@ -157,13 +158,13 @@ app.get('/oauthCallback', function (req, res) {
         res.send('Invalid Attempt[E03]');
     }
 });
+// set up socket.io to use sessions
 io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
+//handle socket.io connections
 io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
-    client.conn.request.session.abcd = "abcd";
-    client.conn.request.session.save();
     if (!oauth2ClientArray[sessionID]) {
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
@@ -297,14 +298,14 @@ io.on('connection', function (client) {
             });
         });
         torrentObjs[uniqid].on("progress", function (data) {
-            if (torrents[uniqid].progress == 100) {
+            if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
                 return false;
             }
             var speed = prettyBytes(data.speed) + '/s';
             var downloaded = prettyBytes(data.downloadedLength);
             var progress = percentage((data.downloadedLength / torrents[uniqid].length));
             var peers = data.peers;
-            torrents[uniqid].speed = speed;
+            torrents[uniqid].speed = (progress == 100) ? prettyBytes(0) + '/s' : speed;
             torrents[uniqid].downloaded = downloaded;
             torrents[uniqid].progress = progress;
             torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
@@ -334,7 +335,7 @@ io.on('connection', function (client) {
                 uploaded = uploaded + data.size;
                 var name = data.name;
                 torrents[id].msg = "Uploaded " + name + " successfully | Total: " + percentage(uploaded / dirSize) + "%";
-                torrents[id].progress = percentage(uploaded / dirSize);
+                torrents[id].cloudUploadProgress = percentage(uploaded / dirSize);
                 sendTorrentsUpdate(io, id);
             }
         });
@@ -352,10 +353,6 @@ io.on('connection', function (client) {
                 }
             }
         });
-    });
-    client.on("updateTorrentObj", function (data) {
-        var obj = data.obj;
-        torrents[obj.id] = obj;
     });
     client.on("toggleIncognito", function () {
         if (incognitoSessions.indexOf(sessionID) > -1) {
