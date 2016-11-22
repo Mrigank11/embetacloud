@@ -54,8 +54,8 @@
 						<div class="row" ng-repeat="result in search.results">
 							<div class="eight wide column"><a href="{{result.link}}">{{result.name}}</a></div>
 							<div class="two wide column">{{result.size}}</div>
-							<div class="two wide column"><span class="seeders">{{result.seeders}}</span> seeders</div>
-							<div class="two wide column"><span class="leechers">{{result.leechers}}</span> leechers</div>
+							<div class="two wide column"><span class="seeders">{{result.seeders}}</span><i class="ui arrow up icon"></i></div>
+							<div class="two wide column"><span class="leechers">{{result.leechers}}</span><i class="ui arrow down icon"></i></div>
 							<div class="two wide column">
 								<i class="ui large green download link icon" ng-click="addTorrent(result.magnetLink)"></i>
 							</div>
