@@ -8,6 +8,7 @@ const debug = require('debug')("eMCloud::Server");
 const socketIO = require("socket.io");
 const FILE = require("fs-extra");
 const archiver = require("archiver");
+const magnet = require('magnet-uri')
 
 import * as mime from 'mime';
 import * as http from 'http';
@@ -44,7 +45,14 @@ function percentage(n): any {
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
+
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/') && data.headers['content-length']) {
+        var duplicates = Object.keys(visitedPages).filter((key) => {
+            return visitedPages[key].url == data.url;
+        });
+        if (duplicates.length > 0) {
+            return false;
+        }
         debug("Starting download of %s", data.url);
         var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
@@ -71,9 +79,12 @@ function middleware(data) {
                         key: uniqid
                     });
                 } else {
-                    visitedPages[uniqid].progress = progress;
-                    visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
-                    sendVisitedPagesUpdate(io, uniqid);
+                    var prevProgress = visitedPages[uniqid].progress;
+                    if ((progress - prevProgress) > 0.1 || progress == 100) {  //don't clog the socket
+                        visitedPages[uniqid].progress = progress;
+                        visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
+                        sendVisitedPagesUpdate(io, uniqid);
+                    }
                 }
             }
 
@@ -104,6 +115,7 @@ function middleware(data) {
             size: prettyBytes(data.headers['content-length'] * 1),
             path: '/files/' + newFileName,
             pinned: false,
+            progress: 0,
             length: data.headers['content-length'] * 1
         };
         visitedPages[uniqid] = obj;
@@ -114,7 +126,8 @@ function sendVisitedPagesUpdate(socket, id) {
     socket.emit('setKey', {
         name: 'visitedPages',
         key: id,
-        value: visitedPages[id]
+        value: visitedPages[id],
+        ignore: "pinned"
     });
 }
 
@@ -123,7 +136,7 @@ function sendTorrentsUpdate(socket, id) {
         name: 'torrents',
         key: id,
         value: torrents[id],
-        ignore: ["dirStructure", "showFiles"]
+        ignore: ["dirStructure", "showFiles", "pinned"]
     });
 }
 
@@ -142,7 +155,7 @@ SERVER_DIRS.forEach((dir) => {
     app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
 });
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
 app.get('/oauthCallback', (req, res) => {
@@ -151,7 +164,7 @@ app.get('/oauthCallback', (req, res) => {
     if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function(err, tokens) {
+        oauth2Client.getToken(code, function (err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
@@ -165,16 +178,17 @@ app.get('/oauthCallback', (req, res) => {
     }
 });
 // set up socket.io to use sessions
-io.use(function(socket, next) {
+io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
 //handle socket.io connections
-io.on('connection', function(client) {
+io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
     if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
     var consentPageUrl = CLOUD.getConsentPageURL(oauth2ClientArray[sessionID]);
+    //Welcome new client
     client.emit('setObj', {
         name: 'status',
         value: {
@@ -279,6 +293,12 @@ io.on('connection', function(client) {
         });
     });
     client.on('addTorrent', (data) => {
+        var dupes = Object.keys(torrents).filter((key) => {
+            return magnet.decode(data.magnet).infoHash == torrents[key].infoHash;
+        });
+        if (dupes.length > 0) {
+            return false;
+        }
         var uniqid = shortid();
         torrentObjs[uniqid] = new Torrent(data.magnet, FILES_PATH, uniqid);
         torrentObjs[uniqid].on("downloaded", (path) => {
@@ -371,26 +391,31 @@ io.on('connection', function(client) {
             store: true // Sets the compression method to STORE.
         });
         // listen for all archive data to be written
-        output.on('close', function() {
+        output.on('close', function () {
             debug("Zipped %s successfully", id);
             torrents[id].zipping = false;
             torrents[id].msg = "Zipped Successfully"
             torrents[id].zipExists = true;
             sendTorrentsUpdate(io, id);
         });
-        archive.on('error', function(err) {
+        archive.on('error', function (err) {
             debug("Error while zipping %s : %s", id, err);
         });
         // pipe archive data to the file
         archive.pipe(output);
         archive.directory(path.join(FILES_PATH, id), false);
         archive.finalize();
+        var percent = 0;
         //listen for progress
         archive.on("data", (chunk) => {
             zippedLength += chunk.length;
-            torrents[id].msg = "Zipping : " + percentage(zippedLength / torrents[id].length) + "%";
-            torrents[id].zipping = true;
-            sendTorrentsUpdate(io, id);
+            var percentNow = percentage(zippedLength / torrents[id].length);
+            if ((percentNow - percent) > 0.1 || percentNow == 100) {
+                percent = percentNow;
+                torrents[id].msg = "Zipping : " + percentNow + "%";
+                torrents[id].zipping = true;
+                sendTorrentsUpdate(io, id);
+            }
         });
     });
     client.on("toggleIncognito", () => {

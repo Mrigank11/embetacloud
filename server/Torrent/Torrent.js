@@ -48,7 +48,7 @@ var Torrent = (function (_super) {
                     downloadedLength: downloadedLength,
                     peers: peers
                 });
-                if (downloadedLength == _this.totalLength) {
+                if (downloadedLength >= _this.totalLength) {
                     _this.emit("progress", {
                         speed: 0,
                         downloadedLength: _this.totalLength

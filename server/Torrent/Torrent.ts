@@ -50,7 +50,7 @@ export class Torrent extends EventEmitter {
                     downloadedLength: downloadedLength,
                     peers: peers
                 })
-                if (downloadedLength == this.totalLength) {
+                if (downloadedLength >= this.totalLength) {
                     this.emit("progress", {
                         speed: 0,
                         downloadedLength: this.totalLength

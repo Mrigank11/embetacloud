@@ -9,6 +9,7 @@ var debug = require('debug')("eMCloud::Server");
 var socketIO = require("socket.io");
 var FILE = require("fs-extra");
 var archiver = require("archiver");
+var magnet = require('magnet-uri');
 var mime = require('mime');
 var http = require('http');
 var path = require('path');
@@ -40,6 +41,12 @@ function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
     var newFileName = null;
     if (!data.contentType.startsWith('text/') && !data.contentType.startsWith('image/') && data.headers['content-length']) {
+        var duplicates = Object.keys(visitedPages).filter(function (key) {
+            return visitedPages[key].url == data.url;
+        });
+        if (duplicates.length > 0) {
+            return false;
+        }
         debug("Starting download of %s", data.url);
         var uniqid = shortid.generate();
         var totalLength = data.headers['content-length'];
@@ -67,9 +74,12 @@ function middleware(data) {
                     });
                 }
                 else {
-                    visitedPages[uniqid].progress = progress;
-                    visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
-                    sendVisitedPagesUpdate(io, uniqid);
+                    var prevProgress = visitedPages[uniqid].progress;
+                    if ((progress - prevProgress) > 0.1 || progress == 100) {
+                        visitedPages[uniqid].progress = progress;
+                        visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
+                        sendVisitedPagesUpdate(io, uniqid);
+                    }
                 }
             }
         });
@@ -99,6 +109,7 @@ function middleware(data) {
             size: prettyBytes(data.headers['content-length'] * 1),
             path: '/files/' + newFileName,
             pinned: false,
+            progress: 0,
             length: data.headers['content-length'] * 1
         };
         visitedPages[uniqid] = obj;
@@ -109,7 +120,8 @@ function sendVisitedPagesUpdate(socket, id) {
     socket.emit('setKey', {
         name: 'visitedPages',
         key: id,
-        value: visitedPages[id]
+        value: visitedPages[id],
+        ignore: "pinned"
     });
 }
 function sendTorrentsUpdate(socket, id) {
@@ -117,7 +129,7 @@ function sendTorrentsUpdate(socket, id) {
         name: 'torrents',
         key: id,
         value: torrents[id],
-        ignore: ["dirStructure", "showFiles"]
+        ignore: ["dirStructure", "showFiles", "pinned"]
     });
 }
 var sessionMiddleware = session({
@@ -171,6 +183,7 @@ io.on('connection', function (client) {
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
     }
     var consentPageUrl = CLOUD.getConsentPageURL(oauth2ClientArray[sessionID]);
+    //Welcome new client
     client.emit('setObj', {
         name: 'status',
         value: {
@@ -278,6 +291,12 @@ io.on('connection', function (client) {
         });
     });
     client.on('addTorrent', function (data) {
+        var dupes = Object.keys(torrents).filter(function (key) {
+            return magnet.decode(data.magnet).infoHash == torrents[key].infoHash;
+        });
+        if (dupes.length > 0) {
+            return false;
+        }
         var uniqid = shortid();
         torrentObjs[uniqid] = new Torrent_1.Torrent(data.magnet, FILES_PATH, uniqid);
         torrentObjs[uniqid].on("downloaded", function (path) {
@@ -384,12 +403,17 @@ io.on('connection', function (client) {
         archive.pipe(output);
         archive.directory(path.join(FILES_PATH, id), false);
         archive.finalize();
+        var percent = 0;
         //listen for progress
         archive.on("data", function (chunk) {
             zippedLength += chunk.length;
-            torrents[id].msg = "Zipping : " + percentage(zippedLength / torrents[id].length) + "%";
-            torrents[id].zipping = true;
-            sendTorrentsUpdate(io, id);
+            var percentNow = percentage(zippedLength / torrents[id].length);
+            if ((percentNow - percent) > 0.1 || percentNow == 100) {
+                percent = percentNow;
+                torrents[id].msg = "Zipping : " + percentNow + "%";
+                torrents[id].zipping = true;
+                sendTorrentsUpdate(io, id);
+            }
         });
     });
     client.on("toggleIncognito", function () {
