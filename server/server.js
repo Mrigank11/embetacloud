@@ -18,9 +18,8 @@ var Torrent_1 = require('./Torrent/Torrent');
 var express = require('express');
 //Constants
 var PORT = Number(process.env.PORT || 3000);
-var SERVER_DIRS = ['css', 'js', 'libs', 'parts'];
 var FILES_PATH = path.join(__dirname, '../files');
-var SPEED_TICK_TIME = 500; //ms
+var SPEED_TICK_TIME = 750; //ms
 //Init
 var oauth2ClientArray = {};
 var capture = false;
@@ -116,20 +115,32 @@ function middleware(data) {
         sendVisitedPagesUpdate(io, uniqid);
     }
 }
-function sendVisitedPagesUpdate(socket, id) {
+function sendVisitedPagesUpdate(socket, id, imp) {
+    var ignore = ["pinned"];
+    if (imp)
+        imp.forEach(function (a) {
+            if (ignore.indexOf(a) > -1)
+                ignore.splice(ignore.indexOf(a));
+        });
     socket.emit('setKey', {
         name: 'visitedPages',
         key: id,
         value: visitedPages[id],
-        ignore: "pinned"
+        ignore: ignore
     });
 }
-function sendTorrentsUpdate(socket, id) {
+function sendTorrentsUpdate(socket, id, imp) {
+    var ignore = ["dirStructure", "showFiles", "pinned"];
+    if (imp)
+        imp.forEach(function (a) {
+            if (ignore.indexOf(a) > -1)
+                ignore.splice(ignore.indexOf(a));
+        });
     socket.emit('setKey', {
         name: 'torrents',
         key: id,
         value: torrents[id],
-        ignore: ["dirStructure", "showFiles", "pinned"]
+        ignore: ignore
     });
 }
 var sessionMiddleware = session({
@@ -141,9 +152,7 @@ var sessionMiddleware = session({
 app.use(sessionMiddleware);
 //set up unblocker
 app.use(unblocker(middleware));
-SERVER_DIRS.forEach(function (dir) {
-    app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
-});
+app.use('/', express.static(path.join(__dirname, '../static')));
 app.use('/files', express.static(FILES_PATH));
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
@@ -202,6 +211,10 @@ io.on('connection', function (client) {
     client.on('clearVisitedPages', function () {
         Object.keys(visitedPages).forEach(function (id) {
             if (!visitedPages[id].pinned) {
+                io.emit("deleteKey", {
+                    name: 'visitedPages',
+                    key: id
+                });
                 if (visitedPages[id].progress == 100) {
                     //  download completed but user requested to clear
                     // delete downloaded file
@@ -266,16 +279,20 @@ io.on('connection', function (client) {
     client.on('pin', function (data) {
         if (data.isTorrent) {
             torrents[data.page.id].pinned = true;
+            sendTorrentsUpdate(io, data.page.id, ["pinned"]);
             return false;
         }
         visitedPages[data.page.id].pinned = true;
+        sendVisitedPagesUpdate(io, data.page.id, ["pinned"]);
     });
     client.on('unpin', function (data) {
         if (data.isTorrent) {
             torrents[data.page.id].pinned = false;
+            sendTorrentsUpdate(io, data.page.id, ["pinned"]);
             return false;
         }
         visitedPages[data.page.id].pinned = false;
+        sendVisitedPagesUpdate(io, data.page.id, ["pinned"]);
     });
     client.on('pirateSearch', function (data) {
         var query = data.query;
@@ -381,6 +398,10 @@ io.on('connection', function (client) {
     client.on("zip", function (data) {
         //exclusively for torrents
         var id = data.id;
+        if (torrents[id].zipping || torrents[id].progress < 100) {
+            //invalid context
+            return false;
+        }
         var zippedLength = 0;
         //no need to check if zip exists
         //event will emit only if zipExists is not set

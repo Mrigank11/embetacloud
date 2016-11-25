@@ -21,9 +21,8 @@ import * as url from 'url';
 
 //Constants
 const PORT = Number(process.env.PORT || 3000);
-const SERVER_DIRS = ['css', 'js', 'libs', 'parts'];
 const FILES_PATH = path.join(__dirname, '../files');
-const SPEED_TICK_TIME = 500;    //ms
+const SPEED_TICK_TIME = 750;    //ms
 
 //Init
 var oauth2ClientArray = {};
@@ -122,21 +121,34 @@ function middleware(data) {
         sendVisitedPagesUpdate(io, uniqid);
     }
 }
-function sendVisitedPagesUpdate(socket, id) {
+
+function sendVisitedPagesUpdate(socket, id, imp?: Array<string>) {
+    var ignore = ["pinned"];
+    if (imp)
+        imp.forEach((a) => {
+            if (ignore.indexOf(a) > -1)
+                ignore.splice(ignore.indexOf(a));
+        });
     socket.emit('setKey', {
         name: 'visitedPages',
         key: id,
         value: visitedPages[id],
-        ignore: "pinned"
+        ignore: ignore
     });
 }
 
-function sendTorrentsUpdate(socket, id) {
+function sendTorrentsUpdate(socket, id, imp?: Array<string>) {
+    var ignore = ["dirStructure", "showFiles", "pinned"];
+    if (imp)
+        imp.forEach((a) => {
+            if (ignore.indexOf(a) > -1)
+                ignore.splice(ignore.indexOf(a));
+        });
     socket.emit('setKey', {
         name: 'torrents',
         key: id,
         value: torrents[id],
-        ignore: ["dirStructure", "showFiles", "pinned"]
+        ignore: ignore
     });
 }
 
@@ -151,11 +163,9 @@ app.use(sessionMiddleware);
 //set up unblocker
 
 app.use(unblocker(middleware));
-SERVER_DIRS.forEach((dir) => {
-    app.use('/' + dir, express.static(path.join(__dirname, '../static', dir)));
-});
+app.use('/', express.static(path.join(__dirname, '../static')));
 app.use('/files', express.static(FILES_PATH));
-app.get('/', function (req, res) {
+app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
 app.get('/oauthCallback', (req, res) => {
@@ -164,7 +174,7 @@ app.get('/oauthCallback', (req, res) => {
     if (!oauth2Client) { res.send('Invalid Attempt[E01]'); return false; }
     var code = req.query.code;
     if (code) {
-        oauth2Client.getToken(code, function (err, tokens) {
+        oauth2Client.getToken(code, function(err, tokens) {
             if (!err) {
                 oauth2Client.setCredentials(tokens);
                 res.redirect('/');
@@ -178,11 +188,11 @@ app.get('/oauthCallback', (req, res) => {
     }
 });
 // set up socket.io to use sessions
-io.use(function (socket, next) {
+io.use(function(socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
 //handle socket.io connections
-io.on('connection', function (client) {
+io.on('connection', function(client) {
     var sessionID = client.conn.request.sessionID;
     if (!oauth2ClientArray[sessionID]) {    //init a new oauth client if not present
         oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
@@ -207,6 +217,10 @@ io.on('connection', function (client) {
     client.on('clearVisitedPages', () => {
         Object.keys(visitedPages).forEach((id) => {
             if (!visitedPages[id].pinned) {
+                io.emit("deleteKey", {
+                    name: 'visitedPages',
+                    key: id
+                });
                 if (visitedPages[id].progress == 100) {
                     //  download completed but user requested to clear
                     // delete downloaded file
@@ -268,16 +282,20 @@ io.on('connection', function (client) {
     client.on('pin', (data) => {
         if (data.isTorrent) {
             torrents[data.page.id].pinned = true;
+            sendTorrentsUpdate(io, data.page.id, ["pinned"]);
             return false;
         }
         visitedPages[data.page.id].pinned = true;
+        sendVisitedPagesUpdate(io, data.page.id, ["pinned"]);
     });
     client.on('unpin', (data) => {
         if (data.isTorrent) {
             torrents[data.page.id].pinned = false;
+            sendTorrentsUpdate(io, data.page.id, ["pinned"]);
             return false;
         }
         visitedPages[data.page.id].pinned = false;
+        sendVisitedPagesUpdate(io, data.page.id, ["pinned"]);
     });
     client.on('pirateSearch', (data) => {
         var query = data.query;
@@ -383,6 +401,10 @@ io.on('connection', function (client) {
     client.on("zip", (data) => {
         //exclusively for torrents
         var id = data.id;
+        if (torrents[id].zipping || torrents[id].progress < 100) {
+            //invalid context
+            return false;
+        }
         var zippedLength = 0;
         //no need to check if zip exists
         //event will emit only if zipExists is not set
@@ -391,14 +413,14 @@ io.on('connection', function (client) {
             store: true // Sets the compression method to STORE.
         });
         // listen for all archive data to be written
-        output.on('close', function () {
+        output.on('close', function() {
             debug("Zipped %s successfully", id);
             torrents[id].zipping = false;
             torrents[id].msg = "Zipped Successfully"
             torrents[id].zipExists = true;
             sendTorrentsUpdate(io, id);
         });
-        archive.on('error', function (err) {
+        archive.on('error', function(err) {
             debug("Error while zipping %s : %s", id, err);
         });
         // pipe archive data to the file

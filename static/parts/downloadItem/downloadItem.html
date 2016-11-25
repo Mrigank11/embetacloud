@@ -19,7 +19,7 @@
 			<!--controls and progress-->
 			<div class="six wide mobile six wide computer right floated right aligned column">
 				<div class="download-controls">
-					<i title="Download file" class="ui circular green download icon" ng-if="!page.isTorrent" ng-click="downloadToPC(page)" ng-class="{'disabled':getProgress(page)<100,'link':getProgress(page)==100}"></i>
+					<i title="Download file" class="ui circular green download icon" ng-if="!page.isTorrent" ng-click="downloadToPC(page)" ng-class="{'disabled':page.progress<100,'link':page.progress==100}"></i>
 					<i title="Get/Show folder structure" class="ui circular blue icon" ng-if="page.isTorrent" ng-class="{
 						'link':!page.gettingDirStructure,
 						'disabled':page.gettingDirStructure,
