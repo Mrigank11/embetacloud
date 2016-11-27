@@ -30,6 +30,11 @@ To start server, run:
 ```js
 npm start
 ```
+<h2>For Heroku:</h2>
+You still need a Google Dev. Project.
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
 # Debugging
 eMbeta Cloud is [debug](https://github.com/visionmedia/debug) compatible, to get debug info set environment variable `DEBUG=eMCloud:*`
 and start server.

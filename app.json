@@ -1,0 +1,16 @@
+{
+    "name": "eMbeta Cloud",
+    "description": "Directly upload files to Cloud",
+    "repository": "https://github.com/Mrigank11/embetacloud",
+    "env": {
+        "GOOGLE_CLIENT_ID": {
+            "description": "Google Project's Client ID"
+        },
+        "GOOGLE_CLIENT_SECRET": {
+            "description": "Google Project's Client Secret"
+        },
+        "GOOGLE_REDIRECT_URL": {
+            "description": "Google Project's Redirect url"
+        }
+    }
+}
