@@ -6,10 +6,10 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var google = require('googleapis');
 var debug = require('debug')('eMCloud::GDrive');
-var FILE = require('fs');
-var mime = require('mime');
-var path = require('path');
-var events_1 = require('events');
+var FILE = require("fs");
+var mime = require("mime");
+var path = require("path");
+var events_1 = require("events");
 var CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 var CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 var REDIRECT_URL = process.env.GOOGLE_REDIRECT_URL;
@@ -22,9 +22,10 @@ var OAuth2 = google.auth.OAuth2;
 var GDrive = (function (_super) {
     __extends(GDrive, _super);
     function GDrive() {
-        _super.apply(this, arguments);
-        this.stack = [];
-        this.stackProcessing = false;
+        var _this = _super.apply(this, arguments) || this;
+        _this.stack = [];
+        _this.stackProcessing = false;
+        return _this;
     }
     GDrive.newOauthClient = function () {
         return new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
@@ -67,7 +68,8 @@ var GDrive = (function (_super) {
                 name: fileName,
                 error: err
             });
-            callback(err, resp);
+            if (callback)
+                callback(err, resp);
         });
         var interval = setInterval(function () {
             _this.emit("progress", {

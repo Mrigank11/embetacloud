@@ -4,22 +4,23 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var torrentStream = require('torrent-stream');
-var path = require('path');
-var events_1 = require('events');
+var torrentStream = require("torrent-stream");
+var path = require("path");
+var events_1 = require("events");
 var shortid = require("shortid");
 var debug = require("debug")("eMCloud::TorrentEngine");
 var TICK_TIME = 500;
 var Torrent = (function (_super) {
     __extends(Torrent, _super);
     function Torrent(magnet, folderPath, uniqid) {
-        _super.call(this);
-        this.magnetLink = magnet;
-        this.saveToFolderPath = folderPath;
-        this.uniqid = uniqid;
-        this.dirStructure = [];
-        this.initEngine();
-        this.handleEngine();
+        var _this = _super.call(this) || this;
+        _this.magnetLink = magnet;
+        _this.saveToFolderPath = folderPath;
+        _this.uniqid = uniqid;
+        _this.dirStructure = [];
+        _this.initEngine();
+        _this.handleEngine();
+        return _this;
     }
     // Private Methods
     Torrent.prototype.initEngine = function () {

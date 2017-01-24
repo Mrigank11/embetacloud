@@ -60,7 +60,8 @@ export class GDrive extends EventEmitter {
                 name: fileName,
                 error: err
             });
-            callback(err, resp);
+            if (callback)
+                callback(err, resp);
         });
         var interval = setInterval(() => {
             this.emit("progress", {
