@@ -13,6 +13,7 @@ Somebody is requested to upload it to a high-speed server so that it's made open
 - Can upload complete folders to Google Drive with click of a button
 - Zip and download torrents
 - Zip and upload torrents to Drive
+- Auto-Upload to GDrive on completion
 
 # Usage
 First clone the repo and install dependencies:

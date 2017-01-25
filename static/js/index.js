@@ -147,13 +147,13 @@ app.controller("main", function ($scope, $timeout) {
         }
     }
     $scope.downloadToDrive = function (page) {
-        if (!(page.progress == 100 && $scope.status.logged)) {
-            return false;
+        if (!$scope.status.logged) {
+            return;
         }
         if (page.isTorrent) {
             page.msg = "Uploading to Drive";
             socket.emit('uploadDirToDrive', { id: page.id });
-            return false;
+            return;
         }
         var filename = prompt("Enter File Name: ");
         if (filename) {
