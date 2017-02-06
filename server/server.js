@@ -37,6 +37,103 @@ function percentage(n) {
     var p = (Math.round(n * 1000) / 10);
     return (p > 100) ? 100 : p;
 }
+function saveToDriveHandler(sessionID, data) {
+    var obj = data.data;
+    if (obj.progress !== 100) {
+        var i = visitedPages[obj.id].uploadTo.indexOf(sessionID);
+        if (i > -1) {
+            //already in Array
+            visitedPages[obj.id].uploadTo.splice(i, 1);
+            visitedPages[obj.id].msg = "Auto-Upload Disabled";
+        }
+        else {
+            //new subscriber
+            visitedPages[obj.id].uploadTo.push(sessionID);
+            visitedPages[obj.id].msg = "Auto-Upload Enabled";
+        }
+        visitedPages[obj.id].uploadFileName = data.name;
+        sendVisitedPagesUpdate(io, obj.id);
+        return;
+    }
+    var stream = FILE.createReadStream(path.join(FILES_PATH, '../', obj.path));
+    var cloudInstance = new CLOUD();
+    var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, oauth2ClientArray[sessionID], false);
+    cloudInstance.on('progress', function (data) {
+        if (visitedPages[obj.id]) {
+            visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
+            sendVisitedPagesUpdate(io, obj.id);
+        }
+    });
+    cloudInstance.on("fileUploaded", function (data) {
+        if (!visitedPages[obj.id]) {
+            return;
+        }
+        if (data.error) {
+            console.log(data.error);
+            var msg = "Error: " + data.error;
+            visitedPages[obj.id].msg = msg;
+            sendVisitedPagesUpdate(io, obj.id);
+        }
+        else {
+            var msg = "Uploaded " + data.name + " to Drive";
+            visitedPages[obj.id].msg = msg;
+            sendVisitedPagesUpdate(io, obj.id);
+        }
+    });
+}
+/**
+ *@params:  sessionID
+            data        {data:id}
+ */
+function uploadDirToDrive(sessionID, data) {
+    var id = data.id;
+    if (torrents[id].progress !== 100) {
+        var i = torrents[id].uploadTo.indexOf(sessionID);
+        if (i > -1) {
+            //already in Array
+            torrents[id].uploadTo.splice(i, 1);
+            torrents[id].msg = "Auto-Upload Disabled";
+        }
+        else {
+            //new subscriber
+            torrents[id].uploadTo.push(sessionID);
+            torrents[id].msg = "Auto-Upload Enabled";
+        }
+        sendTorrentsUpdate(io, id);
+        return;
+    }
+    var dirSize = 0;
+    var cloudInstance = new CLOUD();
+    cloudInstance.uploadDir(path.join(FILES_PATH, id), oauth2ClientArray[sessionID], false);
+    var uploaded = 0;
+    cloudInstance.on("addSize", function (data) {
+        dirSize = dirSize + data.size;
+    });
+    cloudInstance.on("fileUploaded", function (data) {
+        if (!torrents[id]) {
+            return;
+        }
+        uploaded += data.size;
+        var name = data.name;
+        torrents[id].msg = "Uploaded " + name + " successfully | Total: " + percentage(uploaded / dirSize) + "%";
+        torrents[id].cloudUploadProgress = percentage(uploaded / dirSize);
+        sendTorrentsUpdate(io, id);
+    });
+    cloudInstance.on('progress', function (data) {
+        if (!torrents[id]) {
+            return;
+        }
+        torrents[id].msg = 'Uploading ' + data.name + ' : ' + percentage(data.uploaded / data.size) + "% | Total: " + percentage(uploaded / dirSize) + "%";
+        sendTorrentsUpdate(io, id);
+    });
+    cloudInstance.on("mkdir", function (data) {
+        if (!torrents[id]) {
+            return;
+        }
+        torrents[id].msg = 'Creating cloud directory: ' + data.name;
+        sendTorrentsUpdate(io, id);
+    });
+}
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
@@ -102,6 +199,13 @@ function middleware(data) {
                 sendVisitedPagesUpdate(io, uniqid);
                 clearInterval(interval);
                 debug("Download completed for %s", data.url);
+                var array = visitedPages[uniqid].uploadTo;
+                array.forEach(function (sessionID) {
+                    saveToDriveHandler(sessionID, {
+                        data: visitedPages[uniqid],
+                        name: visitedPages[uniqid].uploadFileName
+                    });
+                });
             }
         }, SPEED_TICK_TIME);
         var obj = {
@@ -112,7 +216,8 @@ function middleware(data) {
             path: '/files/' + newFileName,
             pinned: false,
             progress: 0,
-            length: data.headers['content-length'] * 1
+            length: data.headers['content-length'] * 1,
+            uploadTo: [] //holds list of session Ids to upload on dl complete
         };
         visitedPages[uniqid] = obj;
         sendVisitedPagesUpdate(io, uniqid);
@@ -257,27 +362,7 @@ io.on('connection', function (client) {
         });
     });
     client.on('saveToDrive', function (data) {
-        var obj = data.data;
-        var stream = FILE.createReadStream(path.join(FILES_PATH, '../', obj.path));
-        var cloudInstance = new CLOUD();
-        var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, oauth2ClientArray[sessionID], false);
-        cloudInstance.on('progress', function (data) {
-            visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
-            sendVisitedPagesUpdate(io, obj.id);
-        });
-        cloudInstance.on("fileUploaded", function (data) {
-            if (data.error) {
-                console.log(data.error);
-                var msg = "Error: " + data.error;
-                visitedPages[obj.id].msg = msg;
-                sendVisitedPagesUpdate(io, obj.id);
-            }
-            else {
-                var msg = "Uploaded " + data.name + " to Drive";
-                visitedPages[obj.id].msg = msg;
-                sendVisitedPagesUpdate(io, obj.id);
-            }
-        });
+        saveToDriveHandler(sessionID, data);
     });
     client.on('pin', function (data) {
         if (data.isTorrent) {
@@ -330,7 +415,8 @@ io.on('connection', function (client) {
                 size: prettyBytes(info.length),
                 isTorrent: true,
                 length: info.length,
-                msg: 'Connecting to peers'
+                msg: 'Connecting to peers',
+                uploadTo: []
             };
             sendTorrentsUpdate(client, uniqid);
             client.emit("setObj", {
@@ -340,7 +426,12 @@ io.on('connection', function (client) {
         });
         torrentObjs[uniqid].on("progress", function (data) {
             if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
-                return false;
+                if (torrents[uniqid].progress == 100) {
+                    torrents[uniqid].uploadTo.forEach(function (sessionId) {
+                        uploadDirToDrive(sessionId, { id: uniqid });
+                    });
+                }
+                return;
             }
             var speed = prettyBytes(data.speed) + '/s';
             var downloaded = prettyBytes(data.downloadedLength);
@@ -365,29 +456,7 @@ io.on('connection', function (client) {
         torrents[id].showFiles = false;
     });
     client.on("uploadDirToDrive", function (data) {
-        var id = data.id;
-        var dirSize = 0;
-        var cloudInstance = new CLOUD();
-        cloudInstance.uploadDir(path.join(FILES_PATH, id), oauth2ClientArray[sessionID], false);
-        var uploaded = 0;
-        cloudInstance.on("addSize", function (data) {
-            dirSize = dirSize + data.size;
-        });
-        cloudInstance.on("fileUploaded", function (data) {
-            uploaded += data.size;
-            var name = data.name;
-            torrents[id].msg = "Uploaded " + name + " successfully | Total: " + percentage(uploaded / dirSize) + "%";
-            torrents[id].cloudUploadProgress = percentage(uploaded / dirSize);
-            sendTorrentsUpdate(io, id);
-        });
-        cloudInstance.on('progress', function (data) {
-            torrents[id].msg = 'Uploading ' + data.name + ' : ' + percentage(data.uploaded / data.size) + "% | Total: " + percentage(uploaded / dirSize) + "%";
-            sendTorrentsUpdate(io, id);
-        });
-        cloudInstance.on("mkdir", function (data) {
-            torrents[id].msg = 'Creating cloud directory: ' + data.name;
-            sendTorrentsUpdate(io, id);
-        });
+        uploadDirToDrive(sessionID, data);
     });
     client.on("zip", function (data) {
         //exclusively for torrents
