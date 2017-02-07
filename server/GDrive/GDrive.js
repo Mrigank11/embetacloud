@@ -22,7 +22,7 @@ var OAuth2 = google.auth.OAuth2;
 var GDrive = (function (_super) {
     __extends(GDrive, _super);
     function GDrive() {
-        var _this = _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.stack = [];
         _this.stackProcessing = false;
         return _this;

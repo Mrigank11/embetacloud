@@ -1,16 +1,15 @@
-FROM node:boron
+FROM node:6.9
 
-# Create app directory
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
+# Set the applilcation directory
+WORKDIR /app
+
+COPY package.json /app
 
 # Install app dependencies
-COPY package.json /usr/src/app/
 RUN npm install
 
-# Bundle app source
-COPY . /usr/src/app
+# Copy our code from the current folder to /app inside the container
+COPY . /app
 
-#expose
+# Make port 3000 available for publish
 EXPOSE 3000
-CMD [ "npm", "start" ]

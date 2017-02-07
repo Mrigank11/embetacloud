@@ -517,6 +517,27 @@ io.on('connection', function (client) {
         });
     })
 });
-
+//////////////////////////////
+//CLOUD CMD START
+/////////////////////////////
+const cloudcmd = require('cloudcmd');
+const prefix = '/cloudcmd';
+const config = {
+    prefix, /* base URL or function which returns base URL (optional)   */
+    auth: true,
+    username: (process.env.CLOUDCMD_U || 'root'),
+    password: (process.env.CLOUDCMD_P || 'root')
+};
+const socket = socketIO.listen(server, {
+    path: `${prefix}/socket.io`
+});
+app.use(cloudcmd({
+    socket,  /* used by Config, Edit (optional) and Console (required)   */
+    config,  /* config data (optional)                                   */
+}));
+///////////////////////////////
+//CLOUD CMD END
+///////////////////////////////
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
+console.log("Server Started");
