@@ -27,7 +27,7 @@
     "thepiratebay": "^1.3.2",
     "torrent-stream": "^1.0.3",
     "typescript": "^2.0.6",
-    "unblocker": "https://github.com/Mrigank11/node-unblocker/tarball/master",
+    "unblocker": "^1.1.4",
     "url": "^0.11.0"
   },
   "engines": {

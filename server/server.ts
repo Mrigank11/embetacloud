@@ -259,7 +259,7 @@ var sessionMiddleware = session({
 //set up express
 app.use(sessionMiddleware);
 //set up unblocker
-
+app.set("trust proxy", true);
 app.use(unblocker(middleware));
 app.use('/', express.static(path.join(__dirname, '../static')));
 app.use('/files', express.static(FILES_PATH));
