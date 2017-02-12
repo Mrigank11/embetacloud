@@ -259,6 +259,7 @@ var sessionMiddleware = session({
 //set up express
 app.use(sessionMiddleware);
 //set up unblocker
+app.set("trust proxy", true);
 app.use(unblocker(middleware));
 app.use('/', express.static(path.join(__dirname, '../static')));
 app.use('/files', express.static(FILES_PATH));
@@ -406,6 +407,9 @@ io.on('connection', function (client) {
         torrentObjs[uniqid] = new Torrent_1.Torrent(data.magnet, FILES_PATH, uniqid);
         torrentObjs[uniqid].on("downloaded", function (path) {
             //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
+            torrents[uniqid].uploadTo.forEach(function (sessionId) {
+                uploadDirToDrive(sessionId, { id: uniqid });
+            });
         });
         torrentObjs[uniqid].on("info", function (info) {
             torrents[uniqid] = {
@@ -426,11 +430,6 @@ io.on('connection', function (client) {
         });
         torrentObjs[uniqid].on("progress", function (data) {
             if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
-                if (torrents[uniqid].progress == 100) {
-                    torrents[uniqid].uploadTo.forEach(function (sessionId) {
-                        uploadDirToDrive(sessionId, { id: uniqid });
-                    });
-                }
                 return;
             }
             var speed = prettyBytes(data.speed) + '/s';
@@ -526,6 +525,28 @@ io.on('connection', function (client) {
         });
     });
 });
+//////////////////////////////
+//CLOUD CMD START
+/////////////////////////////
+var cloudcmd = require('cloudcmd');
+var prefix = '/cloudcmd';
+var config = {
+    prefix: prefix,
+    auth: true,
+    username: (process.env.CLOUDCMD_U || 'root'),
+    password: (process.env.CLOUDCMD_P || 'root')
+};
+var socket = socketIO.listen(server, {
+    path: prefix + "/socket.io"
+});
+app.use(cloudcmd({
+    socket: socket,
+    config: config
+}));
+///////////////////////////////
+//CLOUD CMD END
+///////////////////////////////
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
+console.log("Server Started");
 //# sourceMappingURL=server.js.map
