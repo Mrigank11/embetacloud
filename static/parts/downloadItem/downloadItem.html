@@ -13,41 +13,46 @@
 				<div class="ui small indicating progress" ng-class="{'active':(getProgress(page) > 0 && getProgress(page) < 100)}" data-percent="{{getProgress(page)}}">
 					<div class="bar" style="width:{{getProgress(page)}}%">
 
-</div>
-</div>
-</div>
-<!--controls and progress-->
-<div class="six wide mobile six wide computer right floated right aligned column">
-	<div class="download-controls">
-		<i title="Download file" class="ui circular green download icon" ng-if="!page.isTorrent" ng-click="downloadToPC(page)" ng-class="{'disabled':page.progress<100,'link':page.progress==100}"></i>
-		<i title="Get/Show folder structure" class="ui circular blue icon" ng-if="page.isTorrent" ng-class="{
-						'link':!page.gettingDirStructure,
-						'disabled':page.gettingDirStructure,
-						'spinner':page.gettingDirStructure,
-						'loading':page.gettingDirStructure,
-						'folder':!page.gettingDirStructure
-						}" ng-click="showTorrentFiles(page)"></i>
-		<i title="Upload to Drive" class="ui circular orange inverted cloud upload icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!status.logged,'link':status.logged}"></i>
-		<i title="Zip and download" ng-if="page.isTorrent" class="ui circular brown icon" ng-class="{	
-						'loading':page.zipping,
-						'spinner':page.zipping,
-						'zip':!page.zipping,
-						'disabled':(page.progress<100 || page.zipping),
-						'link':(page.progress==100 && !page.zipping) 
-						}" ng-click="zipAndDownload(page)"></i>
-		<i title="Upload Zip to Cloud" class="ui circular green link upload icon" ng-if="page.zipExists && status.logged && !page.zipping"
-			ng-click="uploadZipToCloud(page)"></i>
+					</div>
+				</div>
+			</div>
+			<!--controls and progress-->
+			<div class="six wide mobile six wide computer right floated right aligned column">
+				<div class="download-controls">
+					<i title="Download file" class="ui circular green download icon" ng-if="!page.isTorrent" ng-click="downloadToPC(page)" ng-class="{'disabled':page.progress<100,'link':page.progress==100}"></i>
+					<i title="Get/Show folder structure" class="ui circular blue icon" ng-if="page.isTorrent" 
+						ng-class="{
+									'link':!page.gettingDirStructure,
+									'disabled':page.gettingDirStructure,
+									'spinner':page.gettingDirStructure,
+									'loading':page.gettingDirStructure,
+									'folder':!page.gettingDirStructure
+								}" 
+						ng-click="showTorrentFiles(page)"></i>
+					<i title="Upload to Drive" class="ui circular orange inverted cloud upload icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!status.logged,'link':status.logged}"></i>
+					<i title="Zip and download" ng-if="page.isTorrent" class="ui circular brown icon" 
+						ng-class="{	
+									'loading':page.zipping,
+									'spinner':page.zipping,
+									'zip':!page.zipping,
+									'disabled':(page.progress<100 || page.zipping),
+									'link':(page.progress==100 && !page.zipping) 
+									}" 
+						ng-click="zipAndDownload(page)"></i>
+					<i title="Upload Zip to Cloud" class="ui circular green link upload icon" ng-if="page.zipExists && status.logged && !page.zipping"
+								ng-click="uploadZipToCloud(page)"></i>
+					<i title="Delete" class="ui circular red inverted link trash icon" ng-click="delete(page)">	</i>
+				</div>
+				<div class="download-progress">
+					{{page.downloaded}}/{{page.size}}-<span class="download-percent">{{getProgress(page)}}%</span>-<b ng-class="{'muted':(page.speed == '0 B/s')}">{{page.speed}}</b>
+				</div>
+			</div>
+		</div>
+		<div class="row" ng-if="page.isTorrent && page.showFiles">
+			<div class="one wide column"></div>
+			<div class="fifteen wide column directoryContainer">
+				<directory dir="dir" href="'/files/'+page.id" torrent="page" ng-repeat="dir in page.dirStructure"></directory>
+			</div>
+		</div>
 	</div>
-	<div class="download-progress">
-		{{page.downloaded}}/{{page.size}}-<span class="download-percent">{{getProgress(page)}}%</span>-<b ng-class="{'muted':(page.speed == '0 B/s')}">{{page.speed}}</b>
-	</div>
-</div>
-</div>
-<div class="row" ng-if="page.isTorrent && page.showFiles">
-	<div class="one wide column"></div>
-	<div class="fifteen wide column directoryContainer">
-		<directory dir="dir" href="'/files/'+page.id" torrent="page" ng-repeat="dir in page.dirStructure"></directory>
-	</div>
-</div>
-</div>
 </div>

@@ -5,7 +5,7 @@ var Filter = (function () {
     //TODO:add more filters
     Filter.prototype.passed = function (data) {
         var contentType = data.contentType;
-        if (contentType.startsWith('text') || contentType.startsWith('image') || contentType == "application/javascript") {
+        if (contentType.startsWith('text') || contentType.startsWith('image') || contentType == "application/javascript" || contentType.includes("font")) {
             return false;
         }
         else {

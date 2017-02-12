@@ -130,6 +130,47 @@ function uploadDirToDrive(sessionID, data) {
     });
 }
 
+function clearVisitedPage(id) {
+    if (!visitedPages[id].pinned) {
+        io.emit("deleteKey", {
+            name: 'visitedPages',
+            key: id
+        });
+        if (visitedPages[id].progress == 100) {
+            //  download completed but user requested to clear
+            // delete downloaded file
+            FILE.unlink(path.join(FILES_PATH, '../', visitedPages[id].path));
+            delete visitedPages[id];
+        } else {
+            // download is in progress
+            // partial file will be deleted by middleware function
+            visitedPages[id].cleared = true;
+        }
+    }
+}
+
+function clearTorrent(id) {
+    if (!torrents[id].pinned) {
+        io.emit("deleteKey", {
+            name: 'torrents',
+            key: id
+        });
+        if (torrents[id].progress == 100) {
+            //  download completed but user requested to clear
+            // delete downloaded file
+            FILE.remove(path.join(FILES_PATH, id));
+            FILE.remove(path.join(FILES_PATH, id + ".zip"));
+            delete torrents[id];
+            delete torrentObjs[id];
+        } else {
+            delete torrents[id];
+            torrentObjs[id].destroy();
+            delete torrentObjs[id];
+            FILE.remove(path.join(FILES_PATH, id));
+        }
+    }
+}
+
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
@@ -314,46 +355,16 @@ io.on('connection', function (client) {
     })
     client.on('clearVisitedPages', () => {
         Object.keys(visitedPages).forEach((id) => {
-            if (!visitedPages[id].pinned) {
-                io.emit("deleteKey", {
-                    name: 'visitedPages',
-                    key: id
-                });
-                if (visitedPages[id].progress == 100) {
-                    //  download completed but user requested to clear
-                    // delete downloaded file
-                    FILE.unlink(path.join(FILES_PATH, '../', visitedPages[id].path));
-                    delete visitedPages[id];
-                } else {
-                    // download is in progress
-                    // partial file will be deleted by middleware function
-                    visitedPages[id].cleared = true;
-                }
-            }
+            clearVisitedPage(id);
         });
     });
     client.on('clearTorrents', () => {
         Object.keys(torrents).forEach((id) => {
-            if (!torrents[id].pinned) {
-                io.emit("deleteKey", {
-                    name: 'torrents',
-                    key: id
-                });
-                if (torrents[id].progress == 100) {
-                    //  download completed but user requested to clear
-                    // delete downloaded file
-                    FILE.remove(path.join(FILES_PATH, id));
-                    FILE.remove(path.join(FILES_PATH, id + ".zip"));
-                    delete torrents[id];
-                    delete torrentObjs[id];
-                } else {
-                    delete torrents[id];
-                    torrentObjs[id].destroy();
-                    delete torrentObjs[id];
-                    FILE.remove(path.join(FILES_PATH, id));
-                }
-            }
+            clearTorrent(id);
         });
+    });
+    client.on('delete', data => {
+        data.isTorrent ? clearTorrent(data.id) : clearVisitedPage(data.id);
     });
     client.on('saveToDrive', (data) => {
         saveToDriveHandler(sessionID, data);

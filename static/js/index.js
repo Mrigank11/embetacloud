@@ -198,4 +198,7 @@ app.controller("main", function ($scope, $timeout) {
         var name = prompt("Enter file name");
         socket.emit("uploadZipToCloud", { id: page.id, name: name });
     }
+    $scope.delete=function(page){
+        socket.emit("delete",{id:page.id,isTorrent:page.isTorrent});
+    }
 });
