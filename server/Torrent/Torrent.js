@@ -55,7 +55,6 @@ var Torrent = (function (_super) {
                         downloadedLength: _this.totalLength
                     });
                     clearInterval(_this.interval);
-                    _this.engine.destroy();
                 }
             }, TICK_TIME);
         });
@@ -63,6 +62,7 @@ var Torrent = (function (_super) {
             var savedFolderPath = path.join(_this.saveToFolderPath, _this.uniqid);
             debug('Torrent downloaded to %s', savedFolderPath);
             _this.emit("downloaded", savedFolderPath);
+            _this.engine.destroy();
         });
     };
     Torrent.prototype.mergeChildren = function (c1, c2) {
