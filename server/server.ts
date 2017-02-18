@@ -104,6 +104,7 @@ function uploadDirToDrive(sessionID, data) {
         return;
     }
     var dirSize = 0;
+    var currentFileProgress = 0;
     var cloudInstance = new CLOUD();
     cloudInstance.uploadDir(path.join(FILES_PATH, id), oauth2ClientArray[sessionID], false);
     var uploaded = 0;
@@ -120,7 +121,9 @@ function uploadDirToDrive(sessionID, data) {
     });
     cloudInstance.on('progress', (data) => {
         if (!torrents[id]) { return; }
+        currentFileProgress = data.uploaded;
         torrents[id].msg = 'Uploading ' + data.name + ' : ' + percentage(data.uploaded / data.size) + "% | Total: " + percentage(uploaded / dirSize) + "%";
+        torrents[id].cloudUploadProgress = percentage((uploaded + currentFileProgress) / dirSize);
         sendTorrentsUpdate(io, id);
     });
     cloudInstance.on("mkdir", (data) => {
