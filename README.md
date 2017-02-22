@@ -36,6 +36,16 @@ You still need a Google Dev. Project.
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
+<h2> For Docker: </h2>
+`docker run -d -p 3000:3000 -e GOOGLE_CLIENT_ID='***' 
+-e GOOGLE_CLIENT_SECRET='***' 
+-e GOOGLE_REDIRECT_URL='***'
+mrigank11/embetacloud node server/server.js`
+
+Fill `***` with appropriate values.
+
+If you want to debug, add `-e DEBUG='eMCloud:*'` and remove the `-d`
+
 # Debugging
 eMbeta Cloud is [debug](https://github.com/visionmedia/debug) compatible, to get debug info set environment variable `DEBUG=eMCloud:*`
 and start server.
