@@ -122,8 +122,9 @@ function uploadDirToDrive(sessionID, data) {
     cloudInstance.on('progress', (data) => {
         if (!torrents[id]) { return; }
         currentFileProgress = data.uploaded;
-        torrents[id].msg = 'Uploading ' + data.name + ' : ' + percentage(data.uploaded / data.size) + "% | Total: " + percentage(uploaded / dirSize) + "%";
-        torrents[id].cloudUploadProgress = percentage((uploaded + currentFileProgress) / dirSize);
+        var totalProgress = percentage((uploaded + currentFileProgress) / dirSize);
+        torrents[id].msg = 'Uploading ' + data.name + ' : ' + percentage(data.uploaded / data.size) + "% | Total: " + totalProgress + "%";
+        torrents[id].cloudUploadProgress = totalProgress;
         sendTorrentsUpdate(io, id);
     });
     cloudInstance.on("mkdir", (data) => {
