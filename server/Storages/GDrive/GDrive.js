@@ -21,14 +21,36 @@ var SPEED_TICK_TIME = 500;
 var OAuth2 = google.auth.OAuth2;
 var GDrive = (function (_super) {
     __extends(GDrive, _super);
-    function GDrive() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
+    function GDrive(tokens) {
+        var _this = _super.call(this) || this;
         _this.stack = [];
         _this.stackProcessing = false;
+        var o2c = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
+        o2c.setCredentials(tokens);
+        _this.oauth2Client = o2c;
         return _this;
     }
     GDrive.newOauthClient = function () {
         return new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
+    };
+    GDrive.callbackHandler = function (query, cb) {
+        if (query.code) {
+            var code = query.code;
+            var oauth2Client = this.newOauthClient();
+            oauth2Client.getToken(code, function (err, tokens) {
+                if (!err) {
+                    cb(tokens);
+                }
+                else {
+                    debug("Error: " + err);
+                    cb(false);
+                }
+            });
+        }
+        else {
+            debug("Invalid Request");
+            cb(false);
+        }
     };
     /**
      *Upload a file to GDrive
@@ -36,7 +58,7 @@ var GDrive = (function (_super) {
      *      'progress'      :name,uploaded,size
      *      'fileUploaded':size,name,error
      */
-    GDrive.prototype.uploadFile = function (stream, totalSize, mime, fileName, oauth2Client, parentId, callback) {
+    GDrive.prototype.uploadFile = function (stream, totalSize, mime, fileName, parentId, callback) {
         var _this = this;
         //Init upload
         this.emit('progress', {
@@ -47,7 +69,7 @@ var GDrive = (function (_super) {
         });
         debug('Uploading file %s with parentId: %s', fileName, parentId);
         //start upload
-        var drive = google.drive({ version: 'v3', auth: oauth2Client });
+        var drive = google.drive({ version: 'v3', auth: this.oauth2Client });
         var fileMetadata = {
             name: fileName,
             mimeType: mime
@@ -84,8 +106,8 @@ var GDrive = (function (_super) {
         }, SPEED_TICK_TIME);
         return req;
     };
-    GDrive.getConsentPageURL = function (oauth2Client) {
-        var url = oauth2Client.generateAuthUrl({
+    GDrive.getURL = function (tokens) {
+        var url = this.newOauthClient().generateAuthUrl({
             access_type: 'offline',
             scope: SCOPES
         });
@@ -96,12 +118,12 @@ var GDrive = (function (_super) {
      * Emits:
      *      'mkdir':name
      */
-    GDrive.prototype.makeDir = function (name, oauth2Client, callback, parentId) {
+    GDrive.prototype.makeDir = function (name, callback, parentId) {
         this.emit('mkdir', {
             name: name
         });
         debug('Creating Directory %s with parentId: %s', name, parentId);
-        var drive = google.drive({ version: 'v3', auth: oauth2Client });
+        var drive = google.drive({ version: 'v3', auth: this.oauth2Client });
         var fileMetadata = {
             name: name,
             mimeType: 'application/vnd.google-apps.folder'
@@ -127,7 +149,7 @@ var GDrive = (function (_super) {
         if (this.stack.length > 0) {
             this.stackProcessing = true;
             var params = this.stack[0];
-            this.uploadFile(params[0], params[1], params[2], params[3], params[4], params[5], function (err, resp) {
+            this.uploadFile(params[0], params[1], params[2], params[3], params[4], function (err, resp) {
                 if (err) {
                     debug("Error processing stack: " + err);
                 }
@@ -146,7 +168,7 @@ var GDrive = (function (_super) {
      * Emits:
      *      'addSize':size
      */
-    GDrive.prototype.uploadDir = function (folderPath, oauth2Client, parentId) {
+    GDrive.prototype.uploadDir = function (folderPath, parentId) {
         var _this = this;
         FILE.readdir(folderPath, function (err, list) {
             if (!err) {
@@ -157,15 +179,15 @@ var GDrive = (function (_super) {
                         });
                         if (!err) {
                             if (stat.isDirectory()) {
-                                _this.makeDir(item, oauth2Client, function (newParentId) {
-                                    _this.uploadDir(path.join(folderPath, item), oauth2Client, newParentId);
+                                _this.makeDir(item, function (newParentId) {
+                                    _this.uploadDir(path.join(folderPath, item), newParentId);
                                 }, parentId);
                             }
                             else {
                                 var fullPath = path.join(folderPath, item);
                                 var stream = FILE.createReadStream(fullPath);
                                 //this.uploadFile(stream, stat.size, mime.lookup(fullPath), item, oauth2Client, parentId);
-                                _this.stack.push([stream, stat.size, mime.lookup(fullPath), item, oauth2Client, parentId]);
+                                _this.stack.push([stream, stat.size, mime.lookup(fullPath), item, parentId]);
                                 if (!_this.stackProcessing) {
                                     //stack not running
                                     _this.uploadStack();
@@ -186,4 +208,4 @@ var GDrive = (function (_super) {
     return GDrive;
 }(events_1.EventEmitter));
 exports.GDrive = GDrive;
-//# sourceMappingURL=GDrive.js.map
+//# sourceMappingURL=Gdrive.js.map

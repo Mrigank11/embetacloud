@@ -20,8 +20,34 @@ const OAuth2 = google.auth.OAuth2;
 export class GDrive extends EventEmitter {
     private stack: Array<Array<any>> = [];
     private stackProcessing: boolean = false;
+    private oauth2Client;
+
+    constructor(tokens) {
+        super();
+        var o2c = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
+        o2c.setCredentials(tokens);
+        this.oauth2Client = o2c;
+    }
+
     static newOauthClient() {
         return new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
+    }
+    static callbackHandler(query, cb) {
+        if (query.code) {
+            var code = query.code;
+            var oauth2Client = this.newOauthClient();
+            oauth2Client.getToken(code, function (err, tokens) {
+                if (!err) {
+                    cb(tokens);
+                } else {
+                    debug("Error: " + err);
+                    cb(false);
+                }
+            });
+        } else {
+            debug("Invalid Request");
+            cb(false);
+        }
     }
     /**
      *Upload a file to GDrive
@@ -29,7 +55,7 @@ export class GDrive extends EventEmitter {
      *      'progress'      :name,uploaded,size
      *      'fileUploaded':size,name,error
      */
-    public uploadFile(stream, totalSize, mime, fileName, oauth2Client, parentId?, callback?) {
+    public uploadFile(stream, totalSize, mime, fileName, parentId?, callback?) {
         //Init upload
         this.emit('progress', {
             type: 'file',
@@ -39,7 +65,7 @@ export class GDrive extends EventEmitter {
         });
         debug('Uploading file %s with parentId: %s', fileName, parentId);
         //start upload
-        var drive = google.drive({ version: 'v3', auth: oauth2Client });
+        var drive = google.drive({ version: 'v3', auth: this.oauth2Client });
         var fileMetadata = {
             name: fileName,
             mimeType: mime
@@ -76,8 +102,8 @@ export class GDrive extends EventEmitter {
         }, SPEED_TICK_TIME);
         return req;
     }
-    static getConsentPageURL(oauth2Client) {
-        var url = oauth2Client.generateAuthUrl({
+    static getURL(tokens) {
+        var url = this.newOauthClient().generateAuthUrl({
             access_type: 'offline',
             scope: SCOPES
         });
@@ -88,12 +114,12 @@ export class GDrive extends EventEmitter {
      * Emits:
      *      'mkdir':name
      */
-    private makeDir(name, oauth2Client, callback, parentId?) {
+    private makeDir(name, callback, parentId?) {
         this.emit('mkdir', {
             name: name
         });
         debug('Creating Directory %s with parentId: %s', name, parentId);
-        var drive = google.drive({ version: 'v3', auth: oauth2Client });
+        var drive = google.drive({ version: 'v3', auth: this.oauth2Client });
         var fileMetadata = {
             name: name,
             mimeType: 'application/vnd.google-apps.folder'
@@ -118,7 +144,7 @@ export class GDrive extends EventEmitter {
         if (this.stack.length > 0) {
             this.stackProcessing = true;
             var params = this.stack[0];
-            this.uploadFile(params[0], params[1], params[2], params[3], params[4], params[5], (err, resp) => {
+            this.uploadFile(params[0], params[1], params[2], params[3], params[4], (err, resp) => {
                 if (err) {
                     debug("Error processing stack: " + err);
                 } else {
@@ -135,7 +161,7 @@ export class GDrive extends EventEmitter {
      * Emits:
      *      'addSize':size
      */
-    public uploadDir(folderPath, oauth2Client, parentId?) {
+    public uploadDir(folderPath, parentId?) {
         FILE.readdir(folderPath, (err, list) => {
             if (!err) {
                 list.forEach((item) => {
@@ -145,14 +171,14 @@ export class GDrive extends EventEmitter {
                         });
                         if (!err) {
                             if (stat.isDirectory()) {
-                                this.makeDir(item, oauth2Client, (newParentId) => {
-                                    this.uploadDir(path.join(folderPath, item), oauth2Client, newParentId);
+                                this.makeDir(item, (newParentId) => {
+                                    this.uploadDir(path.join(folderPath, item), newParentId);
                                 }, parentId);
                             } else {
                                 var fullPath = path.join(folderPath, item);
                                 var stream = FILE.createReadStream(fullPath);
                                 //this.uploadFile(stream, stat.size, mime.lookup(fullPath), item, oauth2Client, parentId);
-                                this.stack.push([stream, stat.size, mime.lookup(fullPath), item, oauth2Client, parentId]);
+                                this.stack.push([stream, stat.size, mime.lookup(fullPath), item, parentId]);
                                 if (!this.stackProcessing) {
                                     //stack not running
                                     this.uploadStack();

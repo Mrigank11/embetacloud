@@ -1,5 +1,5 @@
 {
-  "base": "libs\\semantic\\",
+  "base": "static\\libs\\semantic\\",
   "paths": {
     "source": {
       "config": "src/theme.config",
@@ -32,7 +32,10 @@
     "item",
     "progress",
     "form",
-    "message"
+    "message",
+    "popup",
+	"transition",
+	"checkbox"
   ],
   "version": "2.2.6"
 }
