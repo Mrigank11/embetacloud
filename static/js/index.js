@@ -81,8 +81,8 @@ app.controller("main", function ($scope, $timeout) {
         socket.emit('clearTorrents');
     }
     $scope.redirectToLoginUrl = function (url) {
-        if (!$scope.status.logged) {
-            window.location = url;
+        if (!$scope.selectedCloud.creds) {
+            window.location.replace(url);
         }
     }
     $scope.openUrl = function () {
@@ -139,6 +139,9 @@ app.controller("main", function ($scope, $timeout) {
             return page.progress;
         }
     }
+    $scope.selectCloud = function (cloud) {
+        socket.emit("selectCloud", { cloud: cloud });
+    }
 
     //DownloadItem
     $scope.downloadToPC = function (page) {
@@ -147,7 +150,7 @@ app.controller("main", function ($scope, $timeout) {
         }
     }
     $scope.downloadToDrive = function (page) {
-        if (!$scope.status.logged) {
+        if (!$scope.selectedCloud.creds) {
             return;
         }
         if (page.isTorrent) {
@@ -198,7 +201,13 @@ app.controller("main", function ($scope, $timeout) {
         var name = prompt("Enter file name");
         socket.emit("uploadZipToCloud", { id: page.id, name: name });
     }
-    $scope.delete=function(page){
-        socket.emit("delete",{id:page.id,isTorrent:page.isTorrent});
+    $scope.delete = function (page) {
+        socket.emit("delete", { id: page.id, isTorrent: page.isTorrent });
     }
+});
+$(document).ready(function () {
+    $('.picon').popup({
+        on: 'hover',
+        hoverable: true
+    });
 });

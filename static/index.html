@@ -20,16 +20,25 @@
 			</div>
 			<!--controls-->
 			<div class="column right floated right aligned">
-				<i title="Login" ng-click="redirectToLoginUrl(status.consentPageUrl)" class="ui circular icon" ng-class="{
-						'loading':!status,
-						'spinner':!status,
-						'disabled':(!status || status.logged),
-						'inverted':status.logged,
-						'green':status.logged,
-						'link':(!status || !status.logged),
-						'user':status
+				<i title="Login" ng-click="redirectToLoginUrl(selectedCloud.url)" class="ui circular icon" ng-class="{
+						'loading':!selectedCloud,
+						'spinner':!selectedCloud,
+						'disabled':(!selectedCloud || selectedCloud.creds),
+						'inverted':selectedCloud.creds,
+						'green':selectedCloud.creds,
+						'link':(!selectedCloud || !selectedCloud.creds),
+						'user':selectedCloud
 					}"></i>
-				<i class="ui lock link circular icon" ng-click="toggleIncognito()" ng-class="{'inverted':incognito,'red':incognito}" title="Incognito"></i>
+				<i style="display: none" class="ui lock link circular icon" ng-click="toggleIncognito()" ng-class="{'inverted':incognito,'red':incognito}"
+				 title="Incognito"></i>
+				<i class="ui cloud circular icon link picon"></i>
+				<div class="ui flowing popup">
+					<div class="ui radio checkbox" ng-repeat="(a,cloud) in clouds">
+						<input type="radio" value="{{a}}" name="selectedCloud" ng-model="sc" ng-change="selectCloud(sc)" ng-checked="selectedCloud.displayName==cloud.displayName"
+						/>
+						<label>{{cloud.displayName}}  </label>
+					</div>
+				</div>
 				<i class="ui lightning circular icon" ng-class="{'green':connected,'red':!connected}"></i>
 			</div>
 		</div>
@@ -101,7 +110,9 @@
 				<download-item ng-repeat="page in torrents track by page.id"></download-item>
 			</div>
 		</div>
+
 	</div>
+
 	<script src="libs/jquery/jquery.min.js"></script>
 	<script src="libs/semantic/dist/semantic.min.js"></script>
 	<script src="libs/angular/angular.min.js"></script>

@@ -13,7 +13,7 @@ var magnet = require('magnet-uri');
 var mime = require("mime");
 var http = require("http");
 var path = require("path");
-var GDrive_1 = require("./GDrive/GDrive");
+var Storages_1 = require("./Storages/Storages");
 var Torrent_1 = require("./Torrent/Torrent");
 var Filter_1 = require("./Filter/Filter");
 var express = require("express");
@@ -22,7 +22,6 @@ var PORT = Number(process.env.PORT || 3000);
 var FILES_PATH = path.join(__dirname, '../files');
 var SPEED_TICK_TIME = 750; //ms
 //Init
-var oauth2ClientArray = {};
 var capture = false;
 var app = express();
 var server = http.createServer(app);
@@ -30,15 +29,14 @@ var io = socketIO(server);
 var visitedPages = {};
 var torrents = {};
 var torrentObjs = {};
-var CLOUD = GDrive_1.GDrive;
 var filter = new Filter_1.Filter();
-var incognitoSessions = [];
 function percentage(n) {
     var p = (Math.round(n * 1000) / 10);
     return (p > 100) ? 100 : p;
 }
-function saveToDriveHandler(sessionID, data) {
+function saveToDriveHandler(session, data) {
     var obj = data.data;
+    var sessionID = session.id;
     if (obj.progress !== 100) {
         var i = visitedPages[obj.id].uploadTo.indexOf(sessionID);
         if (i > -1) {
@@ -56,8 +54,14 @@ function saveToDriveHandler(sessionID, data) {
         return;
     }
     var stream = FILE.createReadStream(path.join(FILES_PATH, '../', obj.path));
-    var cloudInstance = new CLOUD();
-    var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, oauth2ClientArray[sessionID], false);
+    var cloud = Storages_1.Storages.getStorage(session.selectedCloud);
+    var cloudInstance = new cloud(session.clouds[session.selectedCloud].creds);
+    if (!cloudInstance.uploadFile) {
+        visitedPages[obj.id].msg = "Feature Unavailable";
+        sendVisitedPagesUpdate(io, obj.id);
+        return;
+    }
+    var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, false);
     cloudInstance.on('progress', function (data) {
         if (visitedPages[obj.id]) {
             visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
@@ -85,8 +89,9 @@ function saveToDriveHandler(sessionID, data) {
  *@params:  sessionID
             data        {data:id}
  */
-function uploadDirToDrive(sessionID, data) {
+function uploadDirToDrive(session, data) {
     var id = data.id;
+    var sessionID = session.id;
     if (torrents[id].progress !== 100) {
         var i = torrents[id].uploadTo.indexOf(sessionID);
         if (i > -1) {
@@ -104,8 +109,14 @@ function uploadDirToDrive(sessionID, data) {
     }
     var dirSize = 0;
     var currentFileProgress = 0;
-    var cloudInstance = new CLOUD();
-    cloudInstance.uploadDir(path.join(FILES_PATH, id), oauth2ClientArray[sessionID], false);
+    var cloud = Storages_1.Storages.getStorage(session.selectedCloud);
+    var cloudInstance = new cloud(session.clouds[session.selectedCloud].creds);
+    if (!cloudInstance.uploadDir) {
+        visitedPages[id].msg = "Feature Unavailable";
+        sendVisitedPagesUpdate(io, id);
+        return;
+    }
+    cloudInstance.uploadDir(path.join(FILES_PATH, id), false);
     var uploaded = 0;
     cloudInstance.on("addSize", function (data) {
         dirSize = dirSize + data.size;
@@ -182,6 +193,7 @@ function clearTorrent(id) {
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
+    var session = data.clientRequest.session;
     var newFileName = null;
     if (filter.passed(data) && data.headers['content-length']) {
         var duplicates = Object.keys(visitedPages).filter(function (key) {
@@ -311,29 +323,22 @@ app.use('/files', express.static(FILES_PATH));
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
-app.get('/oauthCallback', function (req, res) {
+app.get('/oauthCallback/', function (req, res) {
     var sessionID = req['sessionID'];
-    var oauth2Client = oauth2ClientArray[sessionID];
-    if (!oauth2Client) {
-        res.send('Invalid Attempt[E01]');
-        return false;
+    var session = req['session'];
+    if (!session.selectedCloud) {
+        res.end("Error: socketIO sesssion not initialized.");
+        return;
     }
-    var code = req.query.code;
-    if (code) {
-        oauth2Client.getToken(code, function (err, tokens) {
-            if (!err) {
-                oauth2Client.setCredentials(tokens);
-                res.redirect('/');
-            }
-            else {
-                console.log("Error: " + err);
-                res.end('Error Occured');
-            }
-        });
-    }
-    else {
-        res.send('Invalid Attempt[E03]');
-    }
+    Storages_1.Storages.getStorage(session.selectedCloud).callbackHandler(req.query, (function (creds) {
+        if (!creds) {
+            res.end("Error");
+            return;
+        }
+        session.clouds[session.selectedCloud].creds = creds;
+        session.save();
+        res.redirect('/');
+    }));
 });
 // set up socket.io to use sessions
 io.use(function (socket, next) {
@@ -342,17 +347,20 @@ io.use(function (socket, next) {
 //handle socket.io connections
 io.on('connection', function (client) {
     var sessionID = client.conn.request.sessionID;
-    if (!oauth2ClientArray[sessionID]) {
-        oauth2ClientArray[sessionID] = CLOUD.newOauthClient();
+    var session = client.conn.request.session;
+    //Process Session
+    if (!session.clouds) {
+        session.clouds = Storages_1.Storages.getTemplate(); //an object like : {"Gdrive":{displayName:"..",url:".."},"..":{displayName:"..","url":".."}}
+        session.selectedCloud = "GDrive";
+        session.save();
     }
-    var consentPageUrl = CLOUD.getConsentPageURL(oauth2ClientArray[sessionID]);
-    //Welcome new client
     client.emit('setObj', {
-        name: 'status',
-        value: {
-            consentPageUrl: consentPageUrl,
-            logged: (Object.keys(oauth2ClientArray[sessionID].credentials).length > 0)
-        }
+        name: 'clouds',
+        value: session.clouds
+    });
+    client.emit('setObj', {
+        name: 'selectedCloud',
+        value: session.clouds[session.selectedCloud]
     });
     client.emit('setObj', {
         name: 'visitedPages',
@@ -361,6 +369,10 @@ io.on('connection', function (client) {
     client.emit('setObj', {
         name: 'torrents',
         value: torrents
+    });
+    client.emit('setObj', {
+        name: 'incognito',
+        value: session.incognito ? session.incognito : false
     });
     client.on('clearVisitedPages', function () {
         Object.keys(visitedPages).forEach(function (id) {
@@ -376,7 +388,7 @@ io.on('connection', function (client) {
         data.isTorrent ? clearTorrent(data.id) : clearVisitedPage(data.id);
     });
     client.on('saveToDrive', function (data) {
-        saveToDriveHandler(sessionID, data);
+        saveToDriveHandler(session, data);
     });
     client.on('pin', function (data) {
         if (data.isTorrent) {
@@ -468,7 +480,7 @@ io.on('connection', function (client) {
         torrents[id].showFiles = false;
     });
     client.on("uploadDirToDrive", function (data) {
-        uploadDirToDrive(sessionID, data);
+        uploadDirToDrive(session, data);
     });
     client.on("zip", function (data) {
         //exclusively for torrents
@@ -513,19 +525,21 @@ io.on('connection', function (client) {
         });
     });
     client.on("toggleIncognito", function () {
-        if (incognitoSessions.indexOf(sessionID) > -1) {
-            incognitoSessions.splice(incognitoSessions.indexOf(sessionID));
-        }
-        else {
-            incognitoSessions.push(sessionID);
-        }
+        session.incognito = !session.incognito;
+        session.save();
     });
     client.on("uploadZipToCloud", function (data) {
         var id = data.id;
         var name = data.name;
         var loc = path.join(FILES_PATH, id + ".zip");
-        var cloudInstance = new CLOUD();
-        cloudInstance.uploadFile(FILE.createReadStream(loc), torrents[id].length, mime.lookup(loc), name, oauth2ClientArray[sessionID], false);
+        var cloud = Storages_1.Storages.getStorage(session.selectedCloud);
+        var cloudInstance = new cloud(session.clouds[session.selectedCloud].creds);
+        if (!cloudInstance.uploadFile) {
+            visitedPages[id].msg = "Feature Unavailable";
+            sendVisitedPagesUpdate(io, id);
+            return;
+        }
+        cloudInstance.uploadFile(FILE.createReadStream(loc), torrents[id].length, mime.lookup(loc), name, false);
         cloudInstance.on("progress", function (data) {
             torrents[id].msg = "Uploading Zip: " + percentage(data.uploaded / data.size) + "%";
             torrents[id].zipping = true;
@@ -537,28 +551,18 @@ io.on('connection', function (client) {
             sendTorrentsUpdate(io, id);
         });
     });
+    client.on("selectCloud", function (data) {
+        var cloud = data.cloud;
+        if (session.clouds[cloud]) {
+            session.selectedCloud = cloud;
+            session.save();
+            client.emit('setObj', {
+                name: 'selectedCloud',
+                value: session.clouds[session.selectedCloud]
+            });
+        }
+    });
 });
-//////////////////////////////
-//CLOUD CMD START
-/////////////////////////////
-var cloudcmd = require('cloudcmd');
-var prefix = '/cloudcmd';
-var config = {
-    prefix: prefix,
-    auth: true,
-    username: (process.env.CLOUDCMD_U || 'root'),
-    password: (process.env.CLOUDCMD_P || 'root')
-};
-var socket = socketIO.listen(server, {
-    path: prefix + "/socket.io"
-});
-app.use(cloudcmd({
-    socket: socket,
-    config: config
-}));
-///////////////////////////////
-//CLOUD CMD END
-///////////////////////////////
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
 console.log("Server Started");
