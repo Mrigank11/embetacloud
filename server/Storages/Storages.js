@@ -1,5 +1,5 @@
 "use strict";
-var Gdrive_1 = require("./GDrive/Gdrive");
+var GDrive_1 = require("./GDrive/GDrive");
 var Storages = (function () {
     function Storages() {
     }
@@ -31,7 +31,7 @@ var Storages = (function () {
 Storages.storages = {
     "GDrive": {
         "displayName": "Google Drive",
-        "class": Gdrive_1.GDrive
+        "class": GDrive_1.GDrive
     }
 };
 exports.Storages = Storages;

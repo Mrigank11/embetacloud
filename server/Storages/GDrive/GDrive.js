@@ -208,4 +208,4 @@ var GDrive = (function (_super) {
     return GDrive;
 }(events_1.EventEmitter));
 exports.GDrive = GDrive;
-//# sourceMappingURL=Gdrive.js.map
+//# sourceMappingURL=GDrive.js.map

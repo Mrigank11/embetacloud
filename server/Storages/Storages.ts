@@ -1,4 +1,4 @@
-import { GDrive } from './GDrive/Gdrive';
+import { GDrive } from './GDrive/GDrive';
 
 export class Storages {
     static storages = {
