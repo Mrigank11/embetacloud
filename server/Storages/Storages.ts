@@ -1,10 +1,15 @@
 import { GDrive } from './GDrive/GDrive';
+import { Mega } from './Mega/Mega';
 
 export class Storages {
     static storages = {
         "GDrive": {
             "displayName": "Google Drive",
             "class": GDrive
+        },
+        "Mega": {
+            "displayName": "Mega",
+            "class": Mega
         }
         //Add more storages here
     };

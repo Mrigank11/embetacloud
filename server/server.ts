@@ -320,6 +320,16 @@ app.set("trust proxy", true);
 app.use(unblocker(middleware));
 app.use('/', express.static(path.join(__dirname, '../static')));
 app.use('/files', express.static(FILES_PATH));
+app.get("/login/:cloud", (req, res) => {
+    var cloud = req.params["cloud"];
+    var p = path.join(__dirname, `Storages/${cloud}/login.html`);
+    if (FILE.existsSync(p)) {
+        res.sendFile(p);
+    } else {
+        res.end("404");
+    }
+});
+
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });

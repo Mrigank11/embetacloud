@@ -1,5 +1,6 @@
 "use strict";
 var GDrive_1 = require("./GDrive/GDrive");
+var Mega_1 = require("./Mega/Mega");
 var Storages = (function () {
     function Storages() {
     }
@@ -32,6 +33,10 @@ Storages.storages = {
     "GDrive": {
         "displayName": "Google Drive",
         "class": GDrive_1.GDrive
+    },
+    "Mega": {
+        "displayName": "Mega",
+        "class": Mega_1.Mega
     }
 };
 exports.Storages = Storages;
