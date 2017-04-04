@@ -7,7 +7,7 @@
 			</div>
 			<!--download info-->
 			<div class="eight wide mobile eight wide computer column">
-				<div class="truncate_text" ng-if="!page.isTorrent" title="{{page.url}}">{{page.url}}</div>
+				<div class="truncate_text" ng-if="!page.isTorrent" title="{{page.url}}"> <a href="{{page.url}}"> {{page.defaultName == "" ? page.url : page.defaultName}} </a> </div>
 				<div class="truncate_text" ng-if="page.isTorrent" title="{{page.name}}">{{page.name}}</div>
 				<div class="download-msg">><span>{{page.msg ? page.msg:('Download'+((getProgress(page)==100)?'ed':'ing')+' to cloud')}}</span></div>
 				<div class="ui small indicating progress" ng-class="{'active':(getProgress(page) > 0 && getProgress(page) < 100)}" data-percent="{{getProgress(page)}}">

@@ -17,6 +17,7 @@ var Storages_1 = require("./Storages/Storages");
 var Torrent_1 = require("./Torrent/Torrent");
 var Filter_1 = require("./Filter/Filter");
 var express = require("express");
+var url = require("url");
 //Constants
 var PORT = Number(process.env.PORT || 3000);
 var FILES_PATH = path.join(__dirname, '../files');
@@ -273,6 +274,7 @@ function middleware(data) {
             path: '/files/' + newFileName,
             pinned: false,
             progress: 0,
+            defaultName: (path.basename(url.parse(data.url).pathname).replace("%20", " ") || ""),
             length: data.headers['content-length'] * 1,
             uploadTo: [] //holds list of session Ids to upload on dl complete
         };

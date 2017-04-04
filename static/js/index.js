@@ -158,7 +158,7 @@ app.controller("main", function ($scope, $timeout) {
             socket.emit('uploadDirToDrive', { id: page.id });
             return;
         }
-        var filename = prompt("Enter File Name: ");
+        var filename = prompt("Enter File Name: ", page.defaultName);
         if (filename) {
             socket.emit('saveToDrive', { data: page, name: filename });
             $timeout(function () {

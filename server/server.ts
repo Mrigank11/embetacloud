@@ -8,7 +8,7 @@ const debug = require('debug')("eMCloud::Server");
 const socketIO = require("socket.io");
 const FILE = require("fs-extra");
 const archiver = require("archiver");
-const magnet = require('magnet-uri')
+const magnet = require('magnet-uri');
 
 import * as mime from 'mime';
 import * as http from 'http';
@@ -269,6 +269,7 @@ function middleware(data) {
             path: '/files/' + newFileName,
             pinned: false,
             progress: 0,
+            defaultName: (path.basename(url.parse(data.url).pathname).replace("%20", " ") || ""),
             length: data.headers['content-length'] * 1,
             uploadTo: []        //holds list of session Ids to upload on dl complete
         };
