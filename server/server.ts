@@ -113,8 +113,8 @@ function uploadDirToDrive(session, data) {
     var cloud = Storages.getStorage(session.selectedCloud);
     var cloudInstance = new cloud(session.clouds[session.selectedCloud].creds);
     if (!cloudInstance.uploadDir) {
-        visitedPages[id].msg = "Feature Unavailable";
-        sendVisitedPagesUpdate(io, id);
+        torrents[id].msg = "Feature Unavailable";
+        sendTorrentsUpdate(io, id);
         return;
     }
     cloudInstance.uploadDir(path.join(FILES_PATH, id), false);
@@ -193,11 +193,14 @@ function middleware(data) {
     var newFileName = null;
 
     if (filter.passed(data) && data.headers['content-length']) {
+        if (!session.config.clientDownload.value) {
+            data.clientResponse.status(200).send("<script>window.close()</script>");
+        }
         var duplicates = Object.keys(visitedPages).filter((key) => {
             return visitedPages[key].url == data.url;
         });
         if (duplicates.length > 0) {
-            return false;
+            return;
         }
         debug("DL:%s from %s", data.contentType, data.url);
         var uniqid = shortid.generate();
@@ -363,8 +366,33 @@ io.on('connection', function (client) {
     if (!session.clouds) {
         session.clouds = Storages.getTemplate();    //an object like : {"Gdrive":{displayName:"..",url:".."},"..":{displayName:"..","url":".."}}
         session.selectedCloud = "GDrive";
+        //config
+        session.config = {
+            clientDownload: {
+                value: false,
+                displayName: "Stream downloads to user",
+                type: "checkbox",
+                title: "Choose whether to stream file to client while catching downloads or not, if unchecked windows will close after download is captured."
+            },
+            csHead: {
+                value: true,
+                displayName: "Show cloud selection button in main menu",
+                type: "checkbox"
+            },
+            askForName: {
+                value: true,
+                displayName: "Ask for filename when uploading files",
+                type: "checkbox"
+            }
+        }
         session.save();
     }
+    //send config
+    client.emit('setObj', {
+        name: "config",
+        value: session.config
+    })
+    //send clouds
     client.emit('setObj', {
         name: 'clouds',
         value: session.clouds
@@ -373,10 +401,12 @@ io.on('connection', function (client) {
         name: 'selectedCloud',
         value: session.clouds[session.selectedCloud]
     });
+    //send downloads
     client.emit('setObj', {
         name: 'visitedPages',
         value: visitedPages
     });
+    //send torrrents
     client.emit('setObj', {
         name: 'torrents',
         value: torrents
@@ -550,7 +580,7 @@ io.on('connection', function (client) {
             sendVisitedPagesUpdate(io, id);
             return;
         }
-        cloudInstance.uploadFile(FILE.createReadStream(loc), torrents[id].length, mime.lookup(loc), name, false);
+        cloudInstance.uploadFile(FILE.createReadStream(loc), FILE.statSync(loc).size, mime.lookup(loc), name, false);
         cloudInstance.on("progress", (data) => {
             torrents[id].msg = "Uploading Zip: " + percentage(data.uploaded / data.size) + "%";
             torrents[id].zipping = true;
@@ -573,6 +603,10 @@ io.on('connection', function (client) {
             });
         }
     });
+    client.on("updateConfig", config => {
+        session.config = config;
+        session.save();
+    })
 });
 
 server.listen(PORT);

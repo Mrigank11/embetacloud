@@ -17,7 +17,7 @@ var Mega = (function (_super) {
     }
     Mega.getURL = function () {
         //return the url on which the user will be redirected for credentials, can be OAuth Consent Page or a page on server itself.
-        return "/login/mega";
+        return "/login/Mega";
     };
     Mega.callbackHandler = function (query, callback) {
         //handle the recieved credentials, 'query' contains the GET params. (like for OAuth, authentication code is 'query.code')
@@ -37,7 +37,13 @@ var Mega = (function (_super) {
         //it should emit => progress        : {name,uploaded,size}
         //                  fileUploaded    : {size, name , error} 
         var self = this;
-        var storage = mega({ email: this.creds.email, password: this.creds.password, keepalive: false });
+        var storage = mega({ email: this.creds.email, password: this.creds.password, keepalive: false }, function (err) {
+            if (err) {
+                self.emit("fileUploaded", {
+                    error: err
+                });
+            }
+        });
         var up = storage.upload({
             name: filename,
             size: totalSize

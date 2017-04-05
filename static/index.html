@@ -31,7 +31,7 @@
 					}"></i>
 				<i style="display: none" class="ui lock link circular icon" ng-click="toggleIncognito()" ng-class="{'inverted':incognito,'red':incognito}"
 				 title="Incognito"></i>
-				<i class="ui cloud circular icon link picon"></i>
+				<i class="ui cloud circular icon link picon" ng-show="config.csHead.value"></i>
 				<div class="ui flowing popup">
 					<div class="ui radio checkbox" ng-repeat="(a,cloud) in clouds">
 						<input type="radio" value="{{a}}" name="selectedCloud" ng-model="sc" ng-change="selectCloud(sc)" ng-checked="selectedCloud.displayName==cloud.displayName"
@@ -39,19 +39,48 @@
 						<label>{{cloud.displayName}}  </label>
 					</div>
 				</div>
-				<i class="ui lightning circular icon" ng-class="{'green':connected,'red':!connected}"></i>
+				<i class="ui settings circular link icon" ng-click="showConfig()"></i>
+				<div class="ui small modal" id="config">
+					<div class="header">Configuration</div>
+					<i class="close icon"></i>
+					<div class="content">
+						<div class="ui form">
+							<div class="field" ng-repeat="(x,item) in config">
+								<div title="{{item.title}}" class="ui {{item.type}}">
+									<input type="{{item.type}}" value="{{item.value}}" ng-model="item.value" ng-change="updateConfig()" />
+									<label>{{item.displayName}}  </label>
+								</div>
+							</div>
+							<div class="grouped fields">
+								<label>Selected Cloud : </label>
+								<div class="field">
+									<div class="ui fluid selection dropdown" id="scDropdown">
+										<input type="hidden" name="selectedCloud">
+										<i class="dropdown icon"></i>
+										<div class="text">{{selectedCloud.displayName}}</div>
+										<div class="menu">
+											<div class="item" data-value="{{a}}" ng-repeat="(a,cloud) in clouds">{{cloud.displayName}}</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<i class=" ui lightning circular icon " ng-class="{ 'green':connected, 'red':!connected} "></i>
 			</div>
 		</div>
 		<!--input-->
-		<div class="row">
-			<div class="column">
-				<form onsubmit="return false;" ng-submit="processForm()">
-					<div class="ui fluid action input">
-						<input type="text" ng-change="search.results=false" ng-model="url" ng-keydown="console.log($event.keyCode)" placeholder="Enter url to open, magnet or search torrent...">
+		<div class="row ">
+			<div class="column ">
+				<form onsubmit="return false; " ng-submit="processForm() ">
+					<div class="ui fluid action input ">
+						<input type="text " ng-change="search.results=false " ng-model="url " ng-keydown="console.log($event.keyCode)
+					 " placeholder="Enter url to open, magnet or search torrent... ">
 
-						<button type="submit" class="ui tiny button" ng-if="urlType()=='url'">Open</button>
-						<button type="submit" class="ui tiny button " ng-class="{'loading':magnetLoading}" ng-if="urlType()=='search'">Search</button>
-						<button type="submit" class="ui tiny button " ng-class="{'loading':magnetLoading}" ng-if="urlType()=='magnet'">Load Magnet</button>
+						<button type="submit " class="ui tiny button " ng-if="urlType()=='url' ">Open</button>
+						<button type="submit " class="ui tiny button " ng-class="{ 'loading':magnetLoading} " ng-if="urlType()=='search' ">Search</button>
+						<button type="submit " class="ui tiny button " ng-class="{ 'loading':magnetLoading} " ng-if="urlType()=='magnet' ">Load Magnet</button>
 					</div>
 				</form>
 			</div>

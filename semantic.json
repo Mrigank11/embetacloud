@@ -34,8 +34,11 @@
     "form",
     "message",
     "popup",
-	"transition",
-	"checkbox"
+    "transition",
+    "checkbox",
+    "modal",
+	"dimmer",
+	"dropdown"
   ],
   "version": "2.2.6"
 }

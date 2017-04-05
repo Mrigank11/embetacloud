@@ -142,6 +142,12 @@ app.controller("main", function ($scope, $timeout) {
     $scope.selectCloud = function (cloud) {
         socket.emit("selectCloud", { cloud: cloud });
     }
+    $scope.updateConfig = function () {
+        socket.emit("updateConfig", $scope.config);
+    }
+    $scope.showConfig = function () {
+        $('#config').modal("show");
+    }
 
     //DownloadItem
     $scope.downloadToPC = function (page) {
@@ -158,7 +164,11 @@ app.controller("main", function ($scope, $timeout) {
             socket.emit('uploadDirToDrive', { id: page.id });
             return;
         }
-        var filename = prompt("Enter File Name: ", page.defaultName);
+        if ($scope.config.askForName.value || page.defaultName == "") {
+            var filename = prompt("Enter File Name: ", page.defaultName);
+        } else {
+            var filename = page.defaultName;
+        }
         if (filename) {
             socket.emit('saveToDrive', { data: page, name: filename });
             $timeout(function () {
@@ -209,5 +219,11 @@ $(document).ready(function () {
     $('.picon').popup({
         on: 'hover',
         hoverable: true
+    });
+    $('.dropdown').dropdown();
+    $("#scDropdown").dropdown({
+        onChange: function (value, text, $selectedItem) {
+            socket.emit("selectCloud", { cloud: value });
+        }
     });
 });
