@@ -21,16 +21,12 @@
 				<div class="download-controls">
 					<i title="Download file" class="ui circular green download icon" ng-if="!page.isTorrent" ng-click="downloadToPC(page)" ng-class="{'disabled':page.progress<100,'link':page.progress==100}"></i>
 					<i title="Get/Show folder structure" class="ui circular blue icon" ng-if="page.isTorrent" ng-class="{
-									'link':!page.gettingDirStructure,
-									'disabled':page.gettingDirStructure,
-									'spinner':page.gettingDirStructure,
-									'loading':page.gettingDirStructure,
-									'folder':!page.gettingDirStructure
+									'link folder':!page.gettingDirStructure,
+									'disabled loading spinner':page.gettingDirStructure
 								}" ng-click="showTorrentFiles(page)"></i>
 					<i title="Upload to Drive" class="ui circular orange inverted cloud upload icon" ng-click="downloadToDrive(page)" ng-class="{'disabled':!selectedCloud.creds,'link':selectedCloud.creds}"></i>
 					<i title="Zip and download" ng-if="page.isTorrent" class="ui circular brown icon" ng-class="{	
-									'loading':page.zipping,
-									'spinner':page.zipping,
+									'loading spinner':page.zipping,
 									'zip':!page.zipping,
 									'disabled':(page.progress<100 || page.zipping),
 									'link':(page.progress==100 && !page.zipping) 

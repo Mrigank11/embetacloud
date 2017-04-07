@@ -3,19 +3,40 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="/libs/semantic/dist/semantic.min.css">
     <title>Login To Mega</title>
+    <style>
+        body {
+            background-color: #dadada;
+        }
+    </style>
 </head>
 
-<body>
-    <form method="GET" action="/oauthCallback">
-        <label for="username">Username/email: </label>
-        <input type="text" name="username"><br>
-        <label for="password">Password: </label>
-        <input type="password" name="password"><br>
-        <input type="submit">
-    </form>
+<body class="ui middle aligned center aligned grid">
+    <div class="four wide computer fifteen wide mobile column">
+        <h2>Login to MEGA</h2>
+        <div class="ui segment">
+            <form class="ui form" method="GET" action="/oauthCallback">
+                <div class="field">
+                    <div class="ui left icon input">
+                        <i class="user icon"></i>
+                        <input type="text" name="username" placeholder="E-mail address" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="ui left icon input">
+                        <i class="lock icon"></i>
+                        <input type="password" name="password" placeholder="Password" required>
+                    </div>
+                </div>
+                <input type="submit" class="ui primary fluid button" value="Login">
+            </form>
+        </div>
+    </div>
+    <script src="/libs/jquery/jquery.min.js"></script>
+    <script src="/libs/semantic/dist/semantic.min.js"></script>
 </body>
 
 </html>

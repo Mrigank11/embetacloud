@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html ng-app="app">
 
 <head>
@@ -20,25 +21,28 @@
 			</div>
 			<!--controls-->
 			<div class="column right floated right aligned">
+				<!--login button-->
 				<i title="Login" ng-click="redirectToLoginUrl(selectedCloud.url)" class="ui circular icon" ng-class="{
-						'loading':!selectedCloud,
-						'spinner':!selectedCloud,
+						'loading spinner':!selectedCloud,
 						'disabled':(!selectedCloud || selectedCloud.creds),
-						'inverted':selectedCloud.creds,
-						'green':selectedCloud.creds,
+						'green inverted':selectedCloud.creds,
 						'link':(!selectedCloud || !selectedCloud.creds),
 						'user':selectedCloud
 					}"></i>
+
 				<i style="display: none" class="ui lock link circular icon" ng-click="toggleIncognito()" ng-class="{'inverted':incognito,'red':incognito}"
 				 title="Incognito"></i>
-				<i class="ui cloud circular icon link picon" ng-show="config.csHead.value"></i>
-				<div class="ui flowing popup">
-					<div class="ui radio checkbox" ng-repeat="(a,cloud) in clouds">
-						<input type="radio" value="{{a}}" name="selectedCloud" ng-model="sc" ng-change="selectCloud(sc)" ng-checked="selectedCloud.displayName==cloud.displayName"
-						/>
-						<label>{{cloud.displayName}}  </label>
+				<!--cloud selector-->
+				<div class="ui top left pointing dropdown scDropdown" ng-show="config.csHead.value">
+					<i class="ui cloud circular icon link picon"></i>
+					<input type="hidden" name="selectedCloud">
+					<div class="menu">
+						<div class="item" data-value="{{a}}" ng-class="{'active selected':selectedCloud.displayName == cloud.displayName}" ng-repeat="(a,cloud) in clouds">
+							{{cloud.displayName}}
+						</div>
 					</div>
 				</div>
+				<!--setting-->
 				<i class="ui settings circular link icon" ng-click="showConfig()"></i>
 				<div class="ui small modal" id="config">
 					<div class="header">Configuration</div>
@@ -54,7 +58,7 @@
 							<div class="grouped fields">
 								<label>Selected Cloud : </label>
 								<div class="field">
-									<div class="ui fluid selection dropdown" id="scDropdown">
+									<div class="ui fluid selection dropdown scDropdown">
 										<input type="hidden" name="selectedCloud">
 										<i class="dropdown icon"></i>
 										<div class="text">{{selectedCloud.displayName}}</div>
@@ -67,6 +71,7 @@
 						</div>
 					</div>
 				</div>
+				<!--connection indicator-->
 				<i class=" ui lightning circular icon " ng-class="{ 'green':connected, 'red':!connected} "></i>
 			</div>
 		</div>

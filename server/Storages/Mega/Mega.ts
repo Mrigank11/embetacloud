@@ -118,7 +118,7 @@ export class Mega extends EventEmitter {
             this.stackProcessing = false;
         }
     }
-    public uploadDir(folderPath, parent?) {          //not necessary
+    public uploadDir(folderPath, parent?) {
         //upload a local directory
         //should emit    => addSize    : size      size in bytes to be added to total upload size
         //may emit       => mkdir      : name      name of cloud directory created

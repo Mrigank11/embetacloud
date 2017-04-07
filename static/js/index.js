@@ -221,7 +221,7 @@ $(document).ready(function () {
         hoverable: true
     });
     $('.dropdown').dropdown();
-    $("#scDropdown").dropdown({
+    $(".scDropdown").dropdown({
         onChange: function (value, text, $selectedItem) {
             socket.emit("selectCloud", { cloud: value });
         }

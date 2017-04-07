@@ -12,7 +12,6 @@ const magnet = require('magnet-uri');
 
 import * as mime from 'mime';
 import * as http from 'http';
-import * as torrentStream from 'torrent-stream';
 import * as path from 'path';
 import { Storages } from './Storages/Storages';
 import { Torrent } from './Torrent/Torrent';
@@ -44,14 +43,14 @@ function saveToDriveHandler(session, data) {
     var obj = data.data;
     var sessionID = session.id;
     if (obj.progress !== 100) {
-        var i = visitedPages[obj.id].uploadTo.indexOf(sessionID);
+        var i = visitedPages[obj.id].uploadTo.indexOf(session);
         if (i > -1) {
             //already in Array
             visitedPages[obj.id].uploadTo.splice(i, 1);
             visitedPages[obj.id].msg = "Auto-Upload Disabled";
         } else {
             //new subscriber
-            visitedPages[obj.id].uploadTo.push(sessionID);
+            visitedPages[obj.id].uploadTo.push(session);
             visitedPages[obj.id].msg = "Auto-Upload Enabled";
         }
         visitedPages[obj.id].uploadFileName = data.name;
@@ -95,14 +94,14 @@ function uploadDirToDrive(session, data) {
     var id = data.id;
     var sessionID = session.id;
     if (torrents[id].progress !== 100) {
-        var i = torrents[id].uploadTo.indexOf(sessionID);
+        var i = torrents[id].uploadTo.indexOf(session);
         if (i > -1) {
             //already in Array
             torrents[id].uploadTo.splice(i, 1);
             torrents[id].msg = "Auto-Upload Disabled";
         } else {
             //new subscriber
-            torrents[id].uploadTo.push(sessionID);
+            torrents[id].uploadTo.push(session);
             torrents[id].msg = "Auto-Upload Enabled";
         }
         sendTorrentsUpdate(io, id);
@@ -272,7 +271,7 @@ function middleware(data) {
             path: '/files/' + newFileName,
             pinned: false,
             progress: 0,
-            defaultName: (path.basename(url.parse(data.url).pathname).replace("%20", " ") || ""),
+            defaultName: (path.basename(url.parse(data.url).pathname).replace(/%20/gi, " ") || ""),
             length: data.headers['content-length'] * 1,
             uploadTo: []        //holds list of session Ids to upload on dl complete
         };

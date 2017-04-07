@@ -14,6 +14,9 @@ Somebody is requested to upload it to a high-speed server so that it's made open
 - Zip and download torrents
 - Zip and upload torrents to Drive
 - Auto-Upload to GDrive on completion
+- Multiple Cloud Storage support, currently : 
+    - Google Drive
+    - Mega
 
 # Usage
 First clone the repo and install dependencies:
