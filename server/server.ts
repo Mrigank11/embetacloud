@@ -2,13 +2,13 @@
 const unblocker = require('./unblocker.js');
 const shortid = require('shortid');
 const session = require('express-session');
-const PirateBay = require('thepiratebay');
 const prettyBytes = require('pretty-bytes');
 const debug = require('debug')("eMCloud::Server");
 const socketIO = require("socket.io");
 const FILE = require("fs-extra");
 const archiver = require("archiver");
 const magnet = require('magnet-uri');
+const scrapeIt = require("scrape-it");
 
 import * as mime from 'mime';
 import * as http from 'http';
@@ -451,14 +451,43 @@ io.on('connection', function (client) {
     client.on('pirateSearch', (data) => {
         var query = data.query;
         var page = data.page;
-        PirateBay.search(query).then(results => {
+        scrapeIt(`https://thepiratebay.org/search/${encodeURIComponent(query)}/${page}/7/0`, {
+            result: {
+                listItem: "tr:not(.header)",
+                data: {
+                    name: "a.detLink",
+                    size: {
+                        selector: ".detDesc",
+                        convert: x => { return x.match(/Size (.*),/)[1]; }
+                    },
+                    seeders: {
+                        selector: "td",
+                        eq: 2
+                    },
+                    leechers: {
+                        selector: "td",
+                        eq: 3
+                    },
+                    magnetLink: {
+                        selector: "a",
+                        eq: 3,
+                        attr: "href"
+                    },
+                    link: {
+                        selector: "a.detLink",
+                        attr: "href",
+                        convert: x => `https://thepiratebay.org${x}`
+                    }
+                }
+            }
+        }).then(data => {
             client.emit('setObj', {
                 name: 'search',
                 value: {
-                    results: results,
+                    results: data.result,
                     loading: false
                 }
-            })
+            });
         });
     });
     client.on('addTorrent', (data) => {

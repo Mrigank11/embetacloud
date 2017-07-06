@@ -1,15 +1,17 @@
 "use strict";
+exports.__esModule = true;
 //Requires
 var unblocker = require('./unblocker.js');
 var shortid = require('shortid');
 var session = require('express-session');
-var PirateBay = require('thepiratebay');
+//const PirateBay = require('thepiratebay');
 var prettyBytes = require('pretty-bytes');
 var debug = require('debug')("eMCloud::Server");
 var socketIO = require("socket.io");
 var FILE = require("fs-extra");
 var archiver = require("archiver");
 var magnet = require('magnet-uri');
+var scrapeIt = require("scrape-it");
 var mime = require("mime");
 var http = require("http");
 var path = require("path");
@@ -453,11 +455,48 @@ io.on('connection', function (client) {
     client.on('pirateSearch', function (data) {
         var query = data.query;
         var page = data.page;
-        PirateBay.search(query).then(function (results) {
+        // client.emit('setObj', {
+        //         name: 'search',
+        //         value: {
+        //             results: results,
+        //             loading: false
+        //         }
+        //     })
+        // name,size,seeders,leechers,magnetLink,link
+        scrapeIt("https://thepiratebay.org/search/" + encodeURIComponent(query) + "/" + page + "/7/0", {
+            result: {
+                listItem: "tr:not(.header)",
+                data: {
+                    name: "a.detLink",
+                    size: {
+                        selector: ".detDesc",
+                        convert: function (x) { return x.match(/Size (.*),/)[1]; }
+                    },
+                    seeders: {
+                        selector: "td",
+                        eq: 2
+                    },
+                    leechers: {
+                        selector: "td",
+                        eq: 3
+                    },
+                    magnetLink: {
+                        selector: "a",
+                        eq: 3,
+                        attr: "href"
+                    },
+                    link: {
+                        selector: "a.detLink",
+                        attr: "href",
+                        convert: function (x) { return "https://thepiratebay.org" + x; }
+                    }
+                }
+            }
+        }).then(function (data) {
             client.emit('setObj', {
                 name: 'search',
                 value: {
-                    results: results,
+                    results: data.result,
                     loading: false
                 }
             });

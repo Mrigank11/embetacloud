@@ -1,4 +1,5 @@
 "use strict";
+exports.__esModule = true;
 var GDrive_1 = require("./GDrive/GDrive");
 var Mega_1 = require("./Mega/Mega");
 var Storages = (function () {
@@ -27,17 +28,18 @@ var Storages = (function () {
         });
         return obj;
     };
+    Storages.storages = {
+        "GDrive": {
+            "displayName": "Google Drive",
+            "class": GDrive_1.GDrive
+        },
+        "Mega": {
+            "displayName": "Mega",
+            "class": Mega_1.Mega
+        }
+        //Add more storages here
+    };
     return Storages;
 }());
-Storages.storages = {
-    "GDrive": {
-        "displayName": "Google Drive",
-        "class": GDrive_1.GDrive
-    },
-    "Mega": {
-        "displayName": "Mega",
-        "class": Mega_1.Mega
-    }
-};
 exports.Storages = Storages;
 //# sourceMappingURL=Storages.js.map
