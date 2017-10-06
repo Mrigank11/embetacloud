@@ -11,5 +11,5 @@ RUN npm install
 # Copy our code from the current folder to /app inside the container
 COPY . /app
 
-# Make port 3000 available for publish
-EXPOSE 3000
+# Make port 8080 available for publish
+EXPOSE 8080

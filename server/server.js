@@ -21,7 +21,13 @@ var Filter_1 = require("./Filter/Filter");
 var express = require("express");
 var url = require("url");
 //Constants
-var PORT = Number(process.env.PORT || 3000);
+var PORT = process.env.PORT ||
+		   process.env.OPENSHIFT_NODEJS_PORT ||
+		   parseInt(process.argv[2], 10) ||
+		   8080;
+var HOST = 	process.env.HOST ||
+			process.env.OPENSHIFT_NODEJS_IP ||
+             "0.0.0.0";
 var FILES_PATH = path.join(__dirname, '../files');
 var SPEED_TICK_TIME = 750; //ms
 //Init
@@ -648,7 +654,7 @@ io.on('connection', function (client) {
         session.save();
     });
 });
-server.listen(PORT);
+server.listen(PORT,HOST);
 debug('Server Listening on port:', PORT);
 console.log("Server Started");
 //# sourceMappingURL=server.js.map
