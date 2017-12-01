@@ -9,7 +9,8 @@ app.controller("main", function ($scope, $timeout) {
     $scope.connected = false;
     $scope.search = { loading: false, results: null };
     $scope.incognito = false;
-    //socket emits
+    //region socket emits handler
+    //region socket utils
     socket.on('setKey', function (data) {
         var name = data.name;
         var key = data.key;
@@ -44,6 +45,10 @@ app.controller("main", function ($scope, $timeout) {
             });
         }
     });
+    socket.on("alert", function (text) {
+        alert(text);
+    });
+    //endregion
     socket.on('disconnect', function () {
         $timeout(function () {
             $scope.connected = false;
@@ -54,6 +59,7 @@ app.controller("main", function ($scope, $timeout) {
             $scope.connected = true;
         });
     });
+    //endregion
     //Functions
     $scope.togglePin = function (page) {
         if (page.pinned) {
@@ -91,11 +97,16 @@ app.controller("main", function ($scope, $timeout) {
     $scope.urlType = function () {
         if ($scope.url) {
             var url = $scope.url;
-            if (url.startsWith('http')) {
-                return 'url';
-            } else if (url.startsWith('magnet:')) {
+            if (url.startsWith('http') && url.endsWith(".torrent")) {
+                return 'torrent';
+            }
+            else if (url.startsWith('magnet:')) {
                 return 'magnet';
-            } else {
+            }
+            else if (url.startsWith("http")) {
+                return 'url';
+            }
+            else {
                 return 'search';
             }
         } else {
@@ -111,6 +122,7 @@ app.controller("main", function ($scope, $timeout) {
                 socket.emit('pirateSearch', { query: $scope.url, page: $scope.currentSearchPage });
                 $scope.search.loading = true;
                 break;
+            case "torrent":
             case 'magnet':
                 $scope.addTorrent($scope.url);
         }

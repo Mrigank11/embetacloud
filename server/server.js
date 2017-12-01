@@ -1,10 +1,9 @@
 "use strict";
 exports.__esModule = true;
-//Requires
+//region requires
 var unblocker = require('./unblocker.js');
 var shortid = require('shortid');
 var session = require('express-session');
-//const PirateBay = require('thepiratebay');
 var prettyBytes = require('pretty-bytes');
 var debug = require('debug')("eMCloud::Server");
 var socketIO = require("socket.io");
@@ -12,19 +11,22 @@ var FILE = require("fs-extra");
 var archiver = require("archiver");
 var magnet = require('magnet-uri');
 var scrapeIt = require("scrape-it");
-var mime = require("mime");
 var http = require("http");
 var path = require("path");
+var magnetLink = require("magnet-link");
+var mime = require("mime");
 var Storages_1 = require("./Storages/Storages");
 var Torrent_1 = require("./Torrent/Torrent");
 var Filter_1 = require("./Filter/Filter");
 var express = require("express");
 var url = require("url");
-//Constants
+//endregion
+//region Constants
 var PORT = Number(process.env.PORT || 3000);
 var FILES_PATH = path.join(__dirname, '../files');
 var SPEED_TICK_TIME = 750; //ms
-//Init
+//endregion
+//region Init
 var capture = false;
 var app = express();
 var server = http.createServer(app);
@@ -33,10 +35,14 @@ var visitedPages = {};
 var torrents = {};
 var torrentObjs = {};
 var filter = new Filter_1.Filter();
+//endregion
+//region Utilities
 function percentage(n) {
     var p = (Math.round(n * 1000) / 10);
     return (p > 100) ? 100 : p;
 }
+//endregion
+//region session handlers
 function saveToDriveHandler(session, data) {
     var obj = data.data;
     var sessionID = session.id;
@@ -193,6 +199,48 @@ function clearTorrent(id) {
         }
     }
 }
+function addTorrent(magnet, uniqid, client) {
+    torrentObjs[uniqid] = new Torrent_1.Torrent(magnet, FILES_PATH, uniqid);
+    torrentObjs[uniqid].on("downloaded", function (path) {
+        //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
+        torrents[uniqid].uploadTo.forEach(function (sessionId) {
+            uploadDirToDrive(sessionId, { id: uniqid });
+        });
+    });
+    torrentObjs[uniqid].on("info", function (info) {
+        torrents[uniqid] = {
+            id: uniqid,
+            name: info.name,
+            infoHash: info.infoHash,
+            size: prettyBytes(info.length),
+            isTorrent: true,
+            length: info.length,
+            msg: 'Connecting to peers',
+            uploadTo: []
+        };
+        sendTorrentsUpdate(client, uniqid);
+        client.emit("setObj", {
+            name: 'magnetLoading',
+            value: false
+        });
+    });
+    torrentObjs[uniqid].on("progress", function (data) {
+        if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
+            return;
+        }
+        var speed = prettyBytes(data.speed) + '/s';
+        var downloaded = prettyBytes(data.downloadedLength);
+        var progress = percentage((data.downloadedLength / torrents[uniqid].length));
+        var peers = data.peers;
+        torrents[uniqid].speed = (progress == 100) ? prettyBytes(0) + '/s' : speed;
+        torrents[uniqid].downloaded = downloaded;
+        torrents[uniqid].progress = progress;
+        torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
+        sendTorrentsUpdate(io, uniqid);
+    });
+}
+//endregion
+//region THE MIDDLEWARE
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
@@ -287,6 +335,8 @@ function middleware(data) {
         sendVisitedPagesUpdate(io, uniqid);
     }
 }
+//endregion
+//region socket handlers
 function sendVisitedPagesUpdate(socket, id, imp) {
     var ignore = ["pinned"];
     if (imp)
@@ -315,12 +365,13 @@ function sendTorrentsUpdate(socket, id, imp) {
         ignore: ignore
     });
 }
+//endregion
+//region set up express
 var sessionMiddleware = session({
     secret: "XYeMBetaCloud",
     resave: false,
     saveUninitialized: true
 });
-//set up express
 app.use(sessionMiddleware);
 //set up unblocker
 app.set("trust proxy", true);
@@ -357,7 +408,8 @@ app.get('/oauthCallback/', function (req, res) {
         res.redirect('/');
     }));
 });
-// set up socket.io to use sessions
+//endregion
+//region set up socket.io to use sessions
 io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
@@ -455,14 +507,6 @@ io.on('connection', function (client) {
     client.on('pirateSearch', function (data) {
         var query = data.query;
         var page = data.page;
-        // client.emit('setObj', {
-        //         name: 'search',
-        //         value: {
-        //             results: results,
-        //             loading: false
-        //         }
-        //     })
-        // name,size,seeders,leechers,magnetLink,link
         scrapeIt("https://thepiratebay.org/search/" + encodeURIComponent(query) + "/" + page + "/7/0", {
             result: {
                 listItem: "tr:not(.header)",
@@ -510,44 +554,24 @@ io.on('connection', function (client) {
             return false;
         }
         var uniqid = shortid();
-        torrentObjs[uniqid] = new Torrent_1.Torrent(data.magnet, FILES_PATH, uniqid);
-        torrentObjs[uniqid].on("downloaded", function (path) {
-            //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
-            torrents[uniqid].uploadTo.forEach(function (sessionId) {
-                uploadDirToDrive(sessionId, { id: uniqid });
+        if (!data.magnet.startsWith("magnet")) {
+            //try to load magnet
+            magnetLink(data.magnet, function (err, link) {
+                if (err) {
+                    debug("Failed to load magnet from torrent: " + err.message);
+                    client.emit("setObj", {
+                        name: 'magnetLoading',
+                        value: false
+                    });
+                    client.emit("alert", "Unable to load the .torrent");
+                    return;
+                }
+                //all good !! add magnet
+                addTorrent(link, uniqid, client);
             });
-        });
-        torrentObjs[uniqid].on("info", function (info) {
-            torrents[uniqid] = {
-                id: uniqid,
-                name: info.name,
-                infoHash: info.infoHash,
-                size: prettyBytes(info.length),
-                isTorrent: true,
-                length: info.length,
-                msg: 'Connecting to peers',
-                uploadTo: []
-            };
-            sendTorrentsUpdate(client, uniqid);
-            client.emit("setObj", {
-                name: 'magnetLoading',
-                value: false
-            });
-        });
-        torrentObjs[uniqid].on("progress", function (data) {
-            if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
-                return;
-            }
-            var speed = prettyBytes(data.speed) + '/s';
-            var downloaded = prettyBytes(data.downloadedLength);
-            var progress = percentage((data.downloadedLength / torrents[uniqid].length));
-            var peers = data.peers;
-            torrents[uniqid].speed = (progress == 100) ? prettyBytes(0) + '/s' : speed;
-            torrents[uniqid].downloaded = downloaded;
-            torrents[uniqid].progress = progress;
-            torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
-            sendTorrentsUpdate(io, uniqid);
-        });
+            return;
+        }
+        addTorrent(data.magnet, uniqid, client);
     });
     client.on('getDirStructure', function (data) {
         var id = data.id;
@@ -648,6 +672,7 @@ io.on('connection', function (client) {
         session.save();
     });
 });
+//endregion
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
 console.log("Server Started");

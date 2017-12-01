@@ -2,7 +2,7 @@
 exports.__esModule = true;
 var GDrive_1 = require("./GDrive/GDrive");
 var Mega_1 = require("./Mega/Mega");
-var Storages = (function () {
+var Storages = /** @class */ (function () {
     function Storages() {
     }
     Storages.getStorage = function (name) {

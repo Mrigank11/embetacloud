@@ -16,7 +16,7 @@ var events_1 = require("events");
 var shortid = require("shortid");
 var debug = require("debug")("eMCloud::TorrentEngine");
 var TICK_TIME = 500;
-var Torrent = (function (_super) {
+var Torrent = /** @class */ (function (_super) {
     __extends(Torrent, _super);
     function Torrent(magnet, folderPath, uniqid) {
         var _this = _super.call(this) || this;
@@ -153,7 +153,7 @@ var Torrent = (function (_super) {
     return Torrent;
 }(events_1.EventEmitter));
 exports.Torrent = Torrent;
-var Dir = (function () {
+var Dir = /** @class */ (function () {
     function Dir() {
     }
     return Dir;

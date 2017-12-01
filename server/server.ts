@@ -1,4 +1,7 @@
-//Requires
+declare function require(name);
+declare var process;
+declare var __dirname;
+//region requires
 const unblocker = require('./unblocker.js');
 const shortid = require('shortid');
 const session = require('express-session');
@@ -9,22 +12,23 @@ const FILE = require("fs-extra");
 const archiver = require("archiver");
 const magnet = require('magnet-uri');
 const scrapeIt = require("scrape-it");
+const http = require("http");
+const path = require("path");
+const magnetLink = require("magnet-link");
 
 import * as mime from 'mime';
-import * as http from 'http';
-import * as path from 'path';
 import { Storages } from './Storages/Storages';
 import { Torrent } from './Torrent/Torrent';
 import { Filter } from './Filter/Filter';
 import * as express from 'express';
 import * as url from 'url';
-
-//Constants
+//endregion
+//region Constants
 const PORT = Number(process.env.PORT || 3000);
 const FILES_PATH = path.join(__dirname, '../files');
 const SPEED_TICK_TIME = 750;    //ms
-
-//Init
+//endregion
+//region Init
 var capture = false;
 var app = express();
 var server = http.createServer(app);
@@ -33,12 +37,14 @@ var visitedPages = {};
 var torrents = {};
 var torrentObjs = {};
 const filter = new Filter();
-
+//endregion
+//region Utilities
 function percentage(n): any {
     var p = (Math.round(n * 1000) / 10);
     return (p > 100) ? 100 : p;
 }
-
+//endregion
+//region session handlers
 function saveToDriveHandler(session, data) {
     var obj = data.data;
     var sessionID = session.id;
@@ -185,6 +191,49 @@ function clearTorrent(id) {
     }
 }
 
+function addTorrent(magnet, uniqid, client) {
+    torrentObjs[uniqid] = new Torrent(magnet, FILES_PATH, uniqid);
+    torrentObjs[uniqid].on("downloaded", (path) => {
+        //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
+        torrents[uniqid].uploadTo.forEach(sessionId => {
+            uploadDirToDrive(sessionId, { id: uniqid });
+        });
+    });
+    torrentObjs[uniqid].on("info", (info) => {
+        torrents[uniqid] = {
+            id: uniqid,
+            name: info.name,
+            infoHash: info.infoHash,
+            size: prettyBytes(info.length),
+            isTorrent: true,
+            length: info.length,
+            msg: 'Connecting to peers',
+            uploadTo: []
+        };
+        sendTorrentsUpdate(client, uniqid);
+        client.emit("setObj", {
+            name: 'magnetLoading',
+            value: false
+        });
+    });
+    torrentObjs[uniqid].on("progress", (data) => {
+        if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
+            return;
+        }
+        var speed = prettyBytes(data.speed) + '/s';
+        var downloaded = prettyBytes(data.downloadedLength);
+        var progress = percentage((data.downloadedLength / torrents[uniqid].length));
+        var peers = data.peers;
+        torrents[uniqid].speed = (progress == 100) ? prettyBytes(0) + '/s' : speed;
+        torrents[uniqid].downloaded = downloaded;
+        torrents[uniqid].progress = progress;
+        torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
+        sendTorrentsUpdate(io, uniqid);
+    });
+}
+
+//endregion
+//region THE MIDDLEWARE
 //TODO send pageVisited to its respective user using sessionID
 function middleware(data) {
     var sessionID = data.clientRequest.sessionID;
@@ -279,7 +328,8 @@ function middleware(data) {
         sendVisitedPagesUpdate(io, uniqid);
     }
 }
-
+//endregion
+//region socket handlers
 function sendVisitedPagesUpdate(socket, id, imp?: Array<string>) {
     var ignore = ["pinned"];
     if (imp)
@@ -309,14 +359,13 @@ function sendTorrentsUpdate(socket, id, imp?: Array<string>) {
         ignore: ignore
     });
 }
-
+//endregion
+//region set up express
 var sessionMiddleware = session({
     secret: "XYeMBetaCloud",
     resave: false,
     saveUninitialized: true
 });
-
-//set up express
 app.use(sessionMiddleware);
 //set up unblocker
 app.set("trust proxy", true);
@@ -353,7 +402,8 @@ app.get('/oauthCallback/', (req, res) => {
         res.redirect('/');
     }));
 });
-// set up socket.io to use sessions
+//endregion
+//region set up socket.io to use sessions
 io.use(function (socket, next) {
     sessionMiddleware(socket.conn.request, socket.conn.request.res, next);
 });
@@ -498,44 +548,24 @@ io.on('connection', function (client) {
             return false;
         }
         var uniqid = shortid();
-        torrentObjs[uniqid] = new Torrent(data.magnet, FILES_PATH, uniqid);
-        torrentObjs[uniqid].on("downloaded", (path) => {
-            //CLOUD.uploadDir(path, oauth2ClientArray[sessionID]);
-            torrents[uniqid].uploadTo.forEach(sessionId => {
-                uploadDirToDrive(sessionId, { id: uniqid });
+        if (!data.magnet.startsWith("magnet")) {
+            //try to load magnet
+            magnetLink(data.magnet, (err, link) => {
+                if (err) {
+                    debug(`Failed to load magnet from torrent: ${err.message}`);
+                    client.emit("setObj", {
+                        name: 'magnetLoading',
+                        value: false
+                    });
+                    client.emit("alert", "Unable to load the .torrent");
+                    return;
+                }
+                //all good !! add magnet
+                addTorrent(link, uniqid, client);
             });
-        });
-        torrentObjs[uniqid].on("info", (info) => {
-            torrents[uniqid] = {
-                id: uniqid,
-                name: info.name,
-                infoHash: info.infoHash,
-                size: prettyBytes(info.length),
-                isTorrent: true,
-                length: info.length,
-                msg: 'Connecting to peers',
-                uploadTo: []
-            };
-            sendTorrentsUpdate(client, uniqid);
-            client.emit("setObj", {
-                name: 'magnetLoading',
-                value: false
-            });
-        });
-        torrentObjs[uniqid].on("progress", (data) => {
-            if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
-                return;
-            }
-            var speed = prettyBytes(data.speed) + '/s';
-            var downloaded = prettyBytes(data.downloadedLength);
-            var progress = percentage((data.downloadedLength / torrents[uniqid].length));
-            var peers = data.peers;
-            torrents[uniqid].speed = (progress == 100) ? prettyBytes(0) + '/s' : speed;
-            torrents[uniqid].downloaded = downloaded;
-            torrents[uniqid].progress = progress;
-            torrents[uniqid].msg = (progress == 100) ? 'Download completed' : 'Downloading files, peers: ' + peers;
-            sendTorrentsUpdate(io, uniqid);
-        });
+            return;
+        }
+        addTorrent(data.magnet, uniqid, client);
     });
     client.on('getDirStructure', (data) => {
         var id = data.id;
@@ -636,7 +666,7 @@ io.on('connection', function (client) {
         session.save();
     })
 });
-
+//endregion
 server.listen(PORT);
 debug('Server Listening on port:', PORT);
 console.log("Server Started");

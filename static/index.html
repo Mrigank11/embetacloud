@@ -52,7 +52,7 @@
 							<div class="field" ng-repeat="(x,item) in config">
 								<div title="{{item.title}}" class="ui {{item.type}}">
 									<input type="{{item.type}}" value="{{item.value}}" ng-model="item.value" ng-change="updateConfig()" />
-									<label>{{item.displayName}}  </label>
+									<label>{{item.displayName}} </label>
 								</div>
 							</div>
 							<div class="grouped fields">
@@ -82,7 +82,7 @@
 					<div class="ui fluid action input ">
 						<input type="text " ng-change="search.results=false " ng-model="url " ng-keydown="console.log($event.keyCode)
 					 " placeholder="Enter url to open, magnet or search torrent... ">
-
+						<button type="submit " class="ui tiny button " ng-class="{ 'loading':magnetLoading} " ng-if="urlType()=='torrent' ">Load Torrent</button>
 						<button type="submit " class="ui tiny button " ng-if="urlType()=='url' ">Open</button>
 						<button type="submit " class="ui tiny button " ng-class="{ 'loading':magnetLoading} " ng-if="urlType()=='search' ">Search</button>
 						<button type="submit " class="ui tiny button " ng-class="{ 'loading':magnetLoading} " ng-if="urlType()=='magnet' ">Load Magnet</button>
@@ -96,10 +96,18 @@
 				<div class="ui segment searchResults" ng-class="{'loading':search.loading}">
 					<div class="ui grid">
 						<div class="row" ng-repeat="result in search.results">
-							<div class="eight wide column"><a href="{{result.link}}">{{result.name}}</a></div>
+							<div class="eight wide column">
+								<a href="{{result.link}}">{{result.name}}</a>
+							</div>
 							<div class="two wide column">{{result.size}}</div>
-							<div class="two wide column"><span class="seeders">{{result.seeders}}</span><i class="ui arrow up icon"></i></div>
-							<div class="two wide column"><span class="leechers">{{result.leechers}}</span><i class="ui arrow down icon"></i></div>
+							<div class="two wide column">
+								<span class="seeders">{{result.seeders}}</span>
+								<i class="ui arrow up icon"></i>
+							</div>
+							<div class="two wide column">
+								<span class="leechers">{{result.leechers}}</span>
+								<i class="ui arrow down icon"></i>
+							</div>
 							<div class="two wide column">
 								<i class="ui large green download link icon" ng-click="addTorrent(result.magnetLink)"></i>
 							</div>

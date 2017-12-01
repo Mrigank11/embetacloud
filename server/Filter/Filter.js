@@ -1,6 +1,6 @@
 "use strict";
 exports.__esModule = true;
-var Filter = (function () {
+var Filter = /** @class */ (function () {
     function Filter() {
     }
     //TODO:add more filters

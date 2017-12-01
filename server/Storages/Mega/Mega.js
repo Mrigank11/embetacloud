@@ -16,7 +16,7 @@ var path = require("path");
 var mime = require("mime");
 var debug = require("debug")("eMCloud::Mega");
 var events_1 = require("events");
-var Mega = (function (_super) {
+var Mega = /** @class */ (function (_super) {
     __extends(Mega, _super);
     function Mega(credentials) {
         var _this = _super.call(this) || this;

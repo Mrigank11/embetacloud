@@ -25,7 +25,7 @@ var SCOPES = [
 ];
 var SPEED_TICK_TIME = 500;
 var OAuth2 = google.auth.OAuth2;
-var GDrive = (function (_super) {
+var GDrive = /** @class */ (function (_super) {
     __extends(GDrive, _super);
     function GDrive(tokens) {
         var _this = _super.call(this) || this;
