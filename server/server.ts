@@ -381,7 +381,9 @@ app.get("/login/:cloud", (req, res) => {
         res.end("404");
     }
 });
-
+//region for showtime app
+require("./showtime.js")(app);
+//endregion
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
