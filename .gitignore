@@ -5,3 +5,5 @@ typings
 files
 server/**/*.js.map
 package-lock.json
+
+.directory
