@@ -36,9 +36,7 @@ To start server, run:
 npm start
 ```
 <h2>For Heroku:</h2>
-You still need a Google Dev. Project.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+<i>Heroku is no longer supported.</i>
 
 <h2> For Docker: </h2>
 `docker run -d -p 3000:3000 -e GOOGLE_CLIENT_ID='***' 
