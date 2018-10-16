@@ -503,40 +503,47 @@ io.on('connection', function (client) {
     client.on('pirateSearch', (data) => {
         var query = data.query;
         var page = data.page;
-        scrapeIt(`https://thepiratebay.org/search/${encodeURIComponent(query)}/${page}/7/0`, {
+        query = encodeURIComponent(query)
+        let uri = `http://extratorrent.si/search?q=${query}&sort=seeds&order=desc`
+
+        scrapeIt(`https://siteget.net/o.php?u=${encodeURIComponent(uri)}`, {
             result: {
-                listItem: "tr:not(.header)",
+                listItem: "table.tl tr",
                 data: {
-                    name: "a.detLink",
+                    name: {
+                        selector: "a",
+                        eq: 3,
+                    },
                     size: {
-                        selector: ".detDesc",
-                        convert: x => { return x.match(/Size (.*),/)[1]; }
-                    },
-                    seeders: {
-                        selector: "td",
-                        eq: 2
-                    },
-                    leechers: {
                         selector: "td",
                         eq: 3
                     },
+                    seeders: {
+                        selector: "td",
+                        eq: 4
+                    },
+                    leechers: {
+                        selector: "td",
+                        eq: 5
+                    },
                     magnetLink: {
                         selector: "a",
-                        eq: 3,
+                        eq: 1,
                         attr: "href"
                     },
                     link: {
-                        selector: "a.detLink",
+                        selector: "a",
+                        eq: 3,
                         attr: "href",
-                        convert: x => `https://thepiratebay.org${x}`
                     }
                 }
             }
         }).then(data => {
+            let results = data.result.filter(x => x.name.length > 0);
             client.emit('setObj', {
                 name: 'search',
                 value: {
-                    results: data.result,
+                    results: results,
                     loading: false
                 }
             });
