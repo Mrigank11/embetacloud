@@ -510,9 +510,9 @@ io.on('connection', function (client) {
     client.on('pirateSearch', function (data) {
         var query = data.query;
         var page = data.page;
-        scrapeIt("https://thepiratebay.org/search/" + encodeURIComponent(query) + "/" + page + "/7/0", {
+        scrapeIt("https://thepiratebay.rocks/search/" + encodeURIComponent(query) + "/" + page + "/7/0", {
             result: {
-                listItem: "tr:not(.header)",
+                listItem: "tr:not(.header):not(:last-child)",
                 data: {
                     name: "a.detLink",
                     size: {
