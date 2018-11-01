@@ -27,6 +27,7 @@ import * as url from 'url';
 const PORT = Number(process.env.PORT || 3000);
 const FILES_PATH = path.join(__dirname, '../files');
 const SPEED_TICK_TIME = 750;    //ms
+const TBP_PROXY = process.env["TBP_PROXY"] || "https://thepiratebay.org";
 //endregion
 //region Init
 var capture = false;
@@ -503,7 +504,7 @@ io.on('connection', function (client) {
     client.on('pirateSearch', (data) => {
         var query = data.query;
         var page = data.page;
-        scrapeIt(`https://thepiratebay.rocks/search/${encodeURIComponent(query)}/${page}/7/0`, {
+        scrapeIt(`${TBP_PROXY}/search/${encodeURIComponent(query)}/${page}/7/0`, {
             result: {
                 listItem: "tr:not(.header):not(:last-child)",
                 data: {

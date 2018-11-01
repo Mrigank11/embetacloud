@@ -25,6 +25,8 @@ var url = require("url");
 var PORT = Number(process.env.PORT || 3000);
 var FILES_PATH = path.join(__dirname, '../files');
 var SPEED_TICK_TIME = 750; //ms
+var TBP_PROXY = process.env["TBP_PROXY"] || "https://thepiratebay.rocks";
+debug("TBP Proxy: ", TBP_PROXY);
 //endregion
 //region Init
 var capture = false;
@@ -510,7 +512,7 @@ io.on('connection', function (client) {
     client.on('pirateSearch', function (data) {
         var query = data.query;
         var page = data.page;
-        scrapeIt("https://thepiratebay.rocks/search/" + encodeURIComponent(query) + "/" + page + "/7/0", {
+        scrapeIt(TBP_PROXY + "/search/" + encodeURIComponent(query) + "/" + page + "/7/0", {
             result: {
                 listItem: "tr:not(.header):not(:last-child)",
                 data: {
