@@ -20,6 +20,8 @@ var Torrent_1 = require("./Torrent/Torrent");
 var Filter_1 = require("./Filter/Filter");
 var express = require("express");
 var url = require("url");
+var parsetorrent = require('parse-torrent')
+
 //endregion
 //region Constants
 var PORT = Number(process.env.PORT || 3000);
@@ -264,7 +266,7 @@ function middleware(data) {
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
         var completeFilePath = path.join(FILES_PATH, newFileName);
-        //create /files if it doesn't exist 
+        //create /files if it doesn't exist
         if (!FILE.existsSync(FILES_PATH)) {
             FILE.mkdirSync(FILES_PATH);
         }
@@ -559,24 +561,18 @@ io.on('connection', function (client) {
             return false;
         }
         var uniqid = shortid();
-        if (!data.magnet.startsWith("magnet")) {
-            //try to load magnet
-            magnetLink(data.magnet, function (err, link) {
-                if (err) {
-                    debug("Failed to load magnet from torrent: " + err.message);
-                    client.emit("setObj", {
-                        name: 'magnetLoading',
-                        value: false
-                    });
-                    client.emit("alert", "Unable to load the .torrent");
-                    return;
-                }
-                //all good !! add magnet
-                addTorrent(link, uniqid, client);
-            });
-            return;
-        }
-        addTorrent(data.magnet, uniqid, client);
+        parsetorrent.remote(data.magnet, function (err, parsedtorrent) {
+            if (err) {
+                debug("Failed to load magnet from torrent: " + err.message);
+                client.emit("setObj", {
+                    name: 'magnetLoading',
+                    value: false
+                });
+                client.emit("alert", "Unable to load the .torrent");
+                return;
+            }
+            addTorrent(parsedtorrent, uniqid, client);
+        })
     });
     client.on('getDirStructure', function (data) {
         var id = data.id;
