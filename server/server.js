@@ -230,6 +230,13 @@ function addTorrent(magnet, uniqid, client) {
     });
     torrentObjs[uniqid].on("progress", function (data) {
         if ((torrents[uniqid].progress == 100) || !torrents[uniqid]) {
+            var session = client.conn.request.session;
+            var autoUpload = session.config.autoUpload.value;
+            if (autoUpload) {
+                var session = client.conn.request.session;
+                uploadDirToDrive(session, { id: uniqid });
+            }
+
             return;
         }
         var speed = prettyBytes(data.speed) + '/s';
@@ -444,6 +451,11 @@ io.on('connection', function (client) {
             askForName: {
                 value: true,
                 displayName: "Ask for filename when uploading files",
+                type: "checkbox"
+            },
+            autoUpload: {
+                value: true,
+                displayName: "Auto upload files when completed",
                 type: "checkbox"
             }
         };
