@@ -15,6 +15,7 @@ const scrapeIt = require("scrape-it");
 const http = require("http");
 const path = require("path");
 const magnetLink = require("magnet-link");
+const parsetorrent = require('parse-torrent')
 
 import * as mime from 'mime';
 import { Storages } from './Storages/Storages';
@@ -74,7 +75,7 @@ function saveToDriveHandler(session, data) {
     }
     var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, false);
     cloudInstance.on('progress', (data) => {
-        if (visitedPages[obj.id]) {     //check if user deleted the file 
+        if (visitedPages[obj.id]) {     //check if user deleted the file
             visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
             sendVisitedPagesUpdate(io, obj.id);
         }
@@ -257,7 +258,7 @@ function middleware(data) {
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
         var completeFilePath = path.join(FILES_PATH, newFileName);
-        //create /files if it doesn't exist 
+        //create /files if it doesn't exist
         if (!FILE.existsSync(FILES_PATH)) {
             FILE.mkdirSync(FILES_PATH);
         }
@@ -551,24 +552,18 @@ io.on('connection', function (client) {
             return false;
         }
         var uniqid = shortid();
-        if (!data.magnet.startsWith("magnet")) {
-            //try to load magnet
-            magnetLink(data.magnet, (err, link) => {
-                if (err) {
-                    debug(`Failed to load magnet from torrent: ${err.message}`);
-                    client.emit("setObj", {
-                        name: 'magnetLoading',
-                        value: false
-                    });
-                    client.emit("alert", "Unable to load the .torrent");
-                    return;
-                }
-                //all good !! add magnet
-                addTorrent(link, uniqid, client);
-            });
-            return;
-        }
-        addTorrent(data.magnet, uniqid, client);
+        parsetorrent.remote(data.magnet, (err, parsedtorrent) => {
+            if (err) {
+                debug("Failed to load magnet from torrent: " + err.message);
+                client.emit("setObj", {
+                    name: 'magnetLoading',
+                    value: false
+                });
+                client.emit("alert", "Unable to load the .torrent");
+                return;
+            }
+            addTorrent(parsedtorrent, uniqid, client);
+        })
     });
     client.on('getDirStructure', (data) => {
         var id = data.id;

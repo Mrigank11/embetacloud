@@ -14,6 +14,7 @@ var scrapeIt = require("scrape-it");
 var http = require("http");
 var path = require("path");
 var magnetLink = require("magnet-link");
+var parsetorrent = require('parse-torrent');
 var mime = require("mime");
 var Storages_1 = require("./Storages/Storages");
 var Torrent_1 = require("./Torrent/Torrent");
@@ -25,8 +26,7 @@ var url = require("url");
 var PORT = Number(process.env.PORT || 3000);
 var FILES_PATH = path.join(__dirname, '../files');
 var SPEED_TICK_TIME = 750; //ms
-var TBP_PROXY = process.env["TBP_PROXY"] || "https://thepiratebay.rocks";
-debug("TBP Proxy: ", TBP_PROXY);
+var TBP_PROXY = process.env["TBP_PROXY"] || "https://thepiratebay.org";
 //endregion
 //region Init
 var capture = false;
@@ -74,7 +74,7 @@ function saveToDriveHandler(session, data) {
     }
     var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, false);
     cloudInstance.on('progress', function (data) {
-        if (visitedPages[obj.id]) {
+        if (visitedPages[obj.id]) { //check if user deleted the file
             visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
             sendVisitedPagesUpdate(io, obj.id);
         }
@@ -264,7 +264,7 @@ function middleware(data) {
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
         var completeFilePath = path.join(FILES_PATH, newFileName);
-        //create /files if it doesn't exist 
+        //create /files if it doesn't exist
         if (!FILE.existsSync(FILES_PATH)) {
             FILE.mkdirSync(FILES_PATH);
         }
@@ -275,7 +275,7 @@ function middleware(data) {
             downloadedLength += chunk.length;
             var progress = percentage((downloadedLength / totalLength));
             if (visitedPages[uniqid]) {
-                if (visitedPages[uniqid].cleared) {
+                if (visitedPages[uniqid].cleared) { //download cancelled
                     stream.close();
                     FILE.unlink(completeFilePath); //delete incomplete file
                     delete visitedPages[uniqid];
@@ -286,7 +286,7 @@ function middleware(data) {
                 }
                 else {
                     var prevProgress = visitedPages[uniqid].progress;
-                    if ((progress - prevProgress) > 0.1 || progress == 100) {
+                    if ((progress - prevProgress) > 0.1 || progress == 100) { //don't clog the socket
                         visitedPages[uniqid].progress = progress;
                         visitedPages[uniqid].downloaded = prettyBytes(downloadedLength);
                         sendVisitedPagesUpdate(io, uniqid);
@@ -559,24 +559,18 @@ io.on('connection', function (client) {
             return false;
         }
         var uniqid = shortid();
-        if (!data.magnet.startsWith("magnet")) {
-            //try to load magnet
-            magnetLink(data.magnet, function (err, link) {
-                if (err) {
-                    debug("Failed to load magnet from torrent: " + err.message);
-                    client.emit("setObj", {
-                        name: 'magnetLoading',
-                        value: false
-                    });
-                    client.emit("alert", "Unable to load the .torrent");
-                    return;
-                }
-                //all good !! add magnet
-                addTorrent(link, uniqid, client);
-            });
-            return;
-        }
-        addTorrent(data.magnet, uniqid, client);
+        parsetorrent.remote(data.magnet, function (err, parsedtorrent) {
+            if (err) {
+                debug("Failed to load magnet from torrent: " + err.message);
+                client.emit("setObj", {
+                    name: 'magnetLoading',
+                    value: false
+                });
+                client.emit("alert", "Unable to load the .torrent");
+                return;
+            }
+            addTorrent(parsedtorrent, uniqid, client);
+        });
     });
     client.on('getDirStructure', function (data) {
         var id = data.id;
