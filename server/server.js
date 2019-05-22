@@ -25,7 +25,7 @@ var parsetorrent = require('parse-torrent')
 //endregion
 //region Constants
 var PORT = Number(process.env.PORT || 3000);
-var FILES_PATH = path.join(__dirname, '../files');
+var FILES_PATH = process.env.FILES_PATH || path.join(__dirname, '../files');
 var SPEED_TICK_TIME = 750; //ms
 var TBP_PROXY = process.env["TBP_PROXY"] || "https://thepiratebay.rocks";
 debug("TBP Proxy: ", TBP_PROXY);
@@ -445,7 +445,12 @@ io.on('connection', function (client) {
                 value: true,
                 displayName: "Ask for filename when uploading files",
                 type: "checkbox"
-            }
+            },
+            autoUpload: {
+                value: true,
+                displayName: "Auto upload files when completed",
+                type: "checkbox"
+            },
         };
         session.save();
     }
