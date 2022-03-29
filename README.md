@@ -1,3 +1,4 @@
+![screenshot](.github/screenshot01.png)
 # eMbeta Cloud
 New concept to directly upload files from server to Google Drive.
 It will give you a proxy and will automatically download files to server, after which you can easily upload it Google Drive or download it
@@ -27,6 +28,9 @@ You have to make a google developers project and set the following environment v
 - GOOGLE_CLIENT_ID
 - GOOGLE_CLIENT_SECRET
 - GOOGLE_REDIRECT_URL (it should be &lt;server address&gt;/oauthCallback by default)
+  
+Other environment variables:
+- TBP_PROXY: piratebay proxy to use (default: `https://thepiratebay.org`)
 
 Ensure that you request full google drive access permission and basic G+ info in your google project 
 
@@ -35,9 +39,7 @@ To start server, run:
 npm start
 ```
 <h2>For Heroku:</h2>
-You still need a Google Dev. Project.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+<i>Heroku is no longer supported.</i>
 
 <h2> For Docker: </h2>
 `docker run -d -p 3000:3000 -e GOOGLE_CLIENT_ID='***' 

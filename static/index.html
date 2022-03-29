@@ -96,7 +96,7 @@
 				<div class="ui segment searchResults" ng-class="{'loading':search.loading}">
 					<div class="ui grid">
 						<div class="row" ng-repeat="result in search.results">
-							<div class="eight wide column">
+							<div class="eight wide column" style="word-break:break-all">
 								<a href="{{result.link}}">{{result.name}}</a>
 							</div>
 							<div class="two wide column">{{result.size}}</div>

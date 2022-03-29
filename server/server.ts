@@ -15,6 +15,7 @@ const scrapeIt = require("scrape-it");
 const http = require("http");
 const path = require("path");
 const magnetLink = require("magnet-link");
+const parsetorrent = require('parse-torrent')
 
 import * as mime from 'mime';
 import { Storages } from './Storages/Storages';
@@ -27,6 +28,7 @@ import * as url from 'url';
 const PORT = Number(process.env.PORT || 3000);
 const FILES_PATH = path.join(__dirname, '../files');
 const SPEED_TICK_TIME = 750;    //ms
+const TBP_PROXY = process.env["TBP_PROXY"] || "https://thepiratebay.org";
 //endregion
 //region Init
 var capture = false;
@@ -73,7 +75,7 @@ function saveToDriveHandler(session, data) {
     }
     var req = cloudInstance.uploadFile(stream, obj.length, obj.mime, data.name, false);
     cloudInstance.on('progress', (data) => {
-        if (visitedPages[obj.id]) {     //check if user deleted the file 
+        if (visitedPages[obj.id]) {     //check if user deleted the file
             visitedPages[obj.id].msg = "Uploaded " + percentage(data.uploaded / obj.length) + "%";
             sendVisitedPagesUpdate(io, obj.id);
         }
@@ -256,7 +258,7 @@ function middleware(data) {
         var downloadedLength = 0;
         newFileName = uniqid + '.' + mime.extension(data.contentType);
         var completeFilePath = path.join(FILES_PATH, newFileName);
-        //create /files if it doesn't exist 
+        //create /files if it doesn't exist
         if (!FILE.existsSync(FILES_PATH)) {
             FILE.mkdirSync(FILES_PATH);
         }
@@ -381,7 +383,9 @@ app.get("/login/:cloud", (req, res) => {
         res.end("404");
     }
 });
-
+//region for showtime app
+require("./showtime.js")(app);
+//endregion
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '../static', 'index.html'));
 });
@@ -501,9 +505,9 @@ io.on('connection', function (client) {
     client.on('pirateSearch', (data) => {
         var query = data.query;
         var page = data.page;
-        scrapeIt(`https://thepiratebay.org/search/${encodeURIComponent(query)}/${page}/7/0`, {
+        scrapeIt(`${TBP_PROXY}/search/${encodeURIComponent(query)}/${page}/7/0`, {
             result: {
-                listItem: "tr:not(.header)",
+                listItem: "tr:not(.header):not(:last-child)",
                 data: {
                     name: "a.detLink",
                     size: {
@@ -548,24 +552,18 @@ io.on('connection', function (client) {
             return false;
         }
         var uniqid = shortid();
-        if (!data.magnet.startsWith("magnet")) {
-            //try to load magnet
-            magnetLink(data.magnet, (err, link) => {
-                if (err) {
-                    debug(`Failed to load magnet from torrent: ${err.message}`);
-                    client.emit("setObj", {
-                        name: 'magnetLoading',
-                        value: false
-                    });
-                    client.emit("alert", "Unable to load the .torrent");
-                    return;
-                }
-                //all good !! add magnet
-                addTorrent(link, uniqid, client);
-            });
-            return;
-        }
-        addTorrent(data.magnet, uniqid, client);
+        parsetorrent.remote(data.magnet, (err, parsedtorrent) => {
+            if (err) {
+                debug("Failed to load magnet from torrent: " + err.message);
+                client.emit("setObj", {
+                    name: 'magnetLoading',
+                    value: false
+                });
+                client.emit("alert", "Unable to load the .torrent");
+                return;
+            }
+            addTorrent(parsedtorrent, uniqid, client);
+        })
     });
     client.on('getDirStructure', (data) => {
         var id = data.id;
